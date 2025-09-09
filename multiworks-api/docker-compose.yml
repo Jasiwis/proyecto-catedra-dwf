@@ -1,0 +1,26 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15
+    container_name: multiworks-postgres
+    env_file:
+      - .env
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    ports:
+      - "${POSTGRES_PORT}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./sql/dump.sql:/docker-entrypoint-initdb.d/dump.sql:ro
+    networks:
+      - multiworks-network
+
+volumes:
+  postgres_data:
+
+networks:
+  multiworks-network:
+    driver: bridge
