@@ -1,7 +1,7 @@
 package sv.udb.puntoeventoapi.config.security;
 
-import sv.udb.puntoeventoapi.entity.User;
-import sv.udb.puntoeventoapi.repository.UserRepository;
+import sv.udb.puntoeventoapi.modules.user.entity.User;
+import sv.udb.puntoeventoapi.modules.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.userdetails.*;
 import org.springframework.stereotype.Service;
@@ -23,10 +23,15 @@ public class UserDetailsServiceImpl implements UserDetailsService {
     public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new UsernameNotFoundException("No existe el usuario con ese email"));
+        
+        if (!user.getActive()) {
+            throw new UsernameNotFoundException("Usuario inactivo");
+        }
+        
         return org.springframework.security.core.userdetails.User
                 .withUsername(user.getEmail())
                 .password(user.getPassword())
-                .authorities("USER")
+                .authorities("ROLE_" + user.getUserType().name())
                 .build();
     }
 }

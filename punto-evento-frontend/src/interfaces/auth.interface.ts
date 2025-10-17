@@ -1,3 +1,5 @@
+import { UserType } from "../enums/user-type.enum";
+
 export interface UserDto {
   name: string;
   email: string;
@@ -6,6 +8,8 @@ export interface UserDto {
 
 export interface UserResponse extends UserDto {
   id: string;
+  userType: UserType;
+  active: boolean;
   created_at: string;
   updated_at?: string;
 }

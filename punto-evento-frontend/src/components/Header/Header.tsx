@@ -6,9 +6,14 @@ import {
   DashboardOutlined,
   HomeOutlined,
   FileTextOutlined,
+  TeamOutlined,
+  CalendarOutlined,
+  CheckSquareOutlined,
+  PlusOutlined,
 } from "@ant-design/icons";
 import type { MenuProps } from "antd";
 import { Button } from "../Buttons/Button";
+import { useRole } from "../../hooks/use-role";
 
 interface HeaderProps {
   isAuthenticated: boolean;
@@ -22,6 +27,7 @@ const Header: React.FC<HeaderProps> = ({
   onLogout,
 }) => {
   const navigate = useNavigate();
+  const { isAdmin, isClient, isEmployee, userType } = useRole();
 
   const handleLogout = () => {
     onLogout();
@@ -47,32 +53,75 @@ const Header: React.FC<HeaderProps> = ({
     },
   ];
 
-  const itemsLongMenu = [
-    {
-      key: "Dashboard",
-      icon: <DashboardOutlined />,
-      label: "Dashboard",
-      to: "/dashboard",
-    },
-    {
-      key: "Clients",
-      icon: <UserOutlined />,
-      label: "Clients",
-      to: "/dashboard/clients",
-    },
-    {
-      key: "Employees",
-      icon: <UserOutlined />,
-      label: "Employees",
-      to: "/dashboard/employees",
-    },
-    {
-      key: "Quotes",
-      icon: <FileTextOutlined />,
-      label: "Quotes",
-      to: "/dashboard/quotes",
-    },
-  ];
+  // Menú expandido según el rol del usuario
+  const getMenuItemsByRole = () => {
+    const baseItems = [
+      {
+        key: "Dashboard",
+        icon: <DashboardOutlined />,
+        label: "Dashboard",
+        to: "/dashboard",
+      },
+    ];
+
+    if (isAdmin) {
+      return [
+        ...baseItems,
+        {
+          key: "quotes",
+          icon: <FileTextOutlined />,
+          label: "Cotizaciones",
+          to: "/dashboard/admin/quotes",
+        },
+        {
+          key: "reservations",
+          icon: <CalendarOutlined />,
+          label: "Reservas",
+          to: "/dashboard/admin/reservations",
+        },
+        {
+          key: "users",
+          icon: <TeamOutlined />,
+          label: "Usuarios",
+          to: "/dashboard/users",
+        },
+      ];
+    }
+
+    if (isClient) {
+      return [
+        ...baseItems,
+        {
+          key: "requests",
+          icon: <PlusOutlined />,
+          label: "Nueva Solicitud",
+          to: "/dashboard/client/requests",
+        },
+        {
+          key: "quotes",
+          icon: <FileTextOutlined />,
+          label: "Mis Cotizaciones",
+          to: "/dashboard/client/quotes",
+        },
+      ];
+    }
+
+    if (isEmployee) {
+      return [
+        ...baseItems,
+        {
+          key: "tasks",
+          icon: <CheckSquareOutlined />,
+          label: "Mis Tareas",
+          to: "/dashboard/employee/tasks",
+        },
+      ];
+    }
+
+    return baseItems;
+  };
+
+  const itemsLongMenu = getMenuItemsByRole();
 
   return (
     <header className="bg-white shadow-md">

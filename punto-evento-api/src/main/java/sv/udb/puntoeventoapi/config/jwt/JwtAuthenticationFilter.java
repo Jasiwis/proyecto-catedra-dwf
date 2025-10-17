@@ -11,10 +11,10 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
-import sv.udb.puntoeventoapi.common.ApiResponse;
-import sv.udb.puntoeventoapi.common.exceptions.InvalidJwtException;
+import sv.udb.puntoeventoapi.modules.commons.common.ApiResponse;
+import sv.udb.puntoeventoapi.modules.commons.common.exceptions.InvalidJwtException;
 import sv.udb.puntoeventoapi.config.security.UserDetailsServiceImpl;
-import sv.udb.puntoeventoapi.entity.User;
+import sv.udb.puntoeventoapi.modules.user.entity.User;
 
 import java.io.IOException;
 import java.util.List;
@@ -36,6 +36,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             String path = httpRequest.getRequestURI();
 
             if (path.startsWith("/auth/login") || path.startsWith("/auth/register")) {
+                filterChain.doFilter(request, response);
+                return;
+            }
+
+            // Permitir solicitudes OPTIONS (preflight de CORS)
+            if ("OPTIONS".equalsIgnoreCase(request.getMethod())) {
                 filterChain.doFilter(request, response);
                 return;
             }

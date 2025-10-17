@@ -6,11 +6,17 @@ import Login from "../pages/auth/login";
 import Home from "../pages/home/home";
 import Dashboard from "../pages/dashboard/dashboard";
 import Register from "../pages/auth/register";
-import EmployeeList from "../pages/employees/employees";
-import ClientList from "../pages/clients/clients";
-import QuoteList from "../pages/quotes/QuoteList";
-import QuoteDetail from "../pages/quotes/QuoteDetail";
-import AssignmentDetail from "../pages/assignments/AssignmentDetail";
+import UsersManagement from "../pages/users/UsersManagement";
+import RoleProtectedRoute from "../components/routes/role-protected-route";
+import { UserType } from "../enums/user-type.enum";
+
+// Nuevas páginas según el flujo funcional
+import ClientRequests from "../pages/client/ClientRequests";
+import ClientQuotes from "../pages/client/ClientQuotes";
+import AdminDashboard from "../pages/admin/AdminDashboard";
+import AdminQuotes from "../pages/admin/AdminQuotes";
+import AdminReservations from "../pages/admin/AdminReservations";
+import EmployeeTasks from "../pages/employee/EmployeeTasks";
 
 export const router = createBrowserRouter([
   {
@@ -36,6 +42,7 @@ export const router = createBrowserRouter([
           </ProtectedRoute>
         ),
       },
+      // Dashboard principal (redirige según rol)
       {
         path: "/dashboard",
         element: (
@@ -44,44 +51,72 @@ export const router = createBrowserRouter([
           </ProtectedRoute>
         ),
       },
+
+      // =========================
+      // RUTAS PARA ADMINISTRADOR
+      // =========================
       {
-        path: "/dashboard/employees",
+        path: "/dashboard/admin",
         element: (
-          <ProtectedRoute requireAuth={true}>
-            <EmployeeList />
-          </ProtectedRoute>
+          <RoleProtectedRoute allowedRoles={[UserType.ADMIN]}>
+            <AdminDashboard />
+          </RoleProtectedRoute>
         ),
       },
       {
-        path: "/dashboard/clients",
+        path: "/dashboard/admin/quotes",
         element: (
-          <ProtectedRoute requireAuth={true}>
-            <ClientList />
-          </ProtectedRoute>
+          <RoleProtectedRoute allowedRoles={[UserType.ADMIN]}>
+            <AdminQuotes />
+          </RoleProtectedRoute>
         ),
       },
       {
-        path: "/dashboard/quotes",
+        path: "/dashboard/admin/reservations",
         element: (
-          <ProtectedRoute requireAuth={true}>
-            <QuoteList />
-          </ProtectedRoute>
+          <RoleProtectedRoute allowedRoles={[UserType.ADMIN]}>
+            <AdminReservations />
+          </RoleProtectedRoute>
         ),
       },
       {
-        path: "/dashboard/quotes/:id",
+        path: "/dashboard/users",
         element: (
-          <ProtectedRoute requireAuth={true}>
-            <QuoteDetail />
-          </ProtectedRoute>
+          <RoleProtectedRoute allowedRoles={[UserType.ADMIN]}>
+            <UsersManagement />
+          </RoleProtectedRoute>
+        ),
+      },
+
+      // =========================
+      // RUTAS PARA CLIENTES
+      // =========================
+      {
+        path: "/dashboard/client/requests",
+        element: (
+          <RoleProtectedRoute allowedRoles={[UserType.CLIENT]}>
+            <ClientRequests />
+          </RoleProtectedRoute>
         ),
       },
       {
-        path: "/dashboard/assignments/:id",
+        path: "/dashboard/client/quotes",
         element: (
-          <ProtectedRoute requireAuth={true}>
-            <AssignmentDetail />
-          </ProtectedRoute>
+          <RoleProtectedRoute allowedRoles={[UserType.CLIENT]}>
+            <ClientQuotes />
+          </RoleProtectedRoute>
+        ),
+      },
+
+      // =========================
+      // RUTAS PARA EMPLEADOS
+      // =========================
+      {
+        path: "/dashboard/employee/tasks",
+        element: (
+          <RoleProtectedRoute allowedRoles={[UserType.EMPLOYEE]}>
+            <EmployeeTasks />
+          </RoleProtectedRoute>
         ),
       },
     ],

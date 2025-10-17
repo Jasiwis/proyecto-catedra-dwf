@@ -6,7 +6,7 @@
 -- =========================
 -- ENUMS
 -- =========================
-CREATE TYPE user_role_enum AS ENUM ('ADMIN', 'CLIENTE', 'EMPLEADO');
+CREATE TYPE user_type_enum AS ENUM ('ADMIN', 'EMPLOYEE', 'CLIENT');
 CREATE TYPE person_type_enum AS ENUM ('NATURAL', 'JURIDICA');
 CREATE TYPE contract_type_enum AS ENUM ('PERMANENTE', 'PORHORAS');
 CREATE TYPE active_status_enum AS ENUM ('ACTIVO', 'INACTIVO');
@@ -19,18 +19,17 @@ CREATE TYPE invoice_status_enum AS ENUM ('EMITIDA', 'PAGADA', 'ANULADA');
 -- USUARIOS / PERSONAS
 -- =========================
 CREATE TABLE users (
-    id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    name          TEXT NOT NULL,
-    email         TEXT NOT NULL UNIQUE,
-    password_hash TEXT NOT NULL,
-    role          user_role_enum NOT NULL DEFAULT 'ADMIN',
-    client_id     UUID UNIQUE,
-    employee_id   UUID UNIQUE,
-    created_at    TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at    TIMESTAMP
+    id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name       TEXT NOT NULL,
+    email      TEXT NOT NULL UNIQUE,
+    password   TEXT NOT NULL,
+    user_type  user_type_enum NOT NULL DEFAULT 'CLIENT',
+    active     BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at TEXT,
+    updated_at TEXT
 );
 
-CREATE INDEX idx_users_role ON users(role);
+CREATE INDEX idx_users_user_type ON users(user_type);
 
 CREATE TABLE clients (
     id             UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -41,6 +40,7 @@ CREATE TABLE clients (
     email          TEXT,
     address        TEXT,
     status         active_status_enum NOT NULL DEFAULT 'ACTIVO',
+    user_id        UUID REFERENCES users(id) ON DELETE CASCADE,
     created_by     UUID REFERENCES users(id) ON DELETE SET NULL,
     created_at     TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at     TIMESTAMP,
@@ -57,17 +57,13 @@ CREATE TABLE employees (
     email          TEXT,
     address        TEXT,
     status         active_status_enum NOT NULL DEFAULT 'ACTIVO',
+    user_id        UUID REFERENCES users(id) ON DELETE CASCADE,
     created_by     UUID REFERENCES users(id) ON DELETE SET NULL,
     created_at     TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at     TIMESTAMP,
     deactivated_at TIMESTAMP
 );
 
-ALTER TABLE users
-  ADD CONSTRAINT fk_users_client FOREIGN KEY (client_id) REFERENCES clients(id) ON DELETE SET NULL;
-
-ALTER TABLE users
-  ADD CONSTRAINT fk_users_employee FOREIGN KEY (employee_id) REFERENCES employees(id) ON DELETE SET NULL;
 
 -- =========================
 -- AUDITORÍA / HISTORIAL
@@ -106,10 +102,12 @@ CREATE TABLE service_catalog (
 CREATE TABLE requests (
     id                 UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     client_id          UUID NOT NULL REFERENCES clients(id) ON DELETE CASCADE,
-    event_date         DATE NOT NULL,
+    event_date         TEXT NOT NULL,
     location           TEXT NOT NULL,
-    requested_services JSONB NOT NULL,
+    requested_services TEXT NOT NULL,
     notes              TEXT,
+    status             active_status_enum NOT NULL DEFAULT 'ACTIVO',
+    created_by         UUID REFERENCES users(id) ON DELETE SET NULL,
     created_at         TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at         TIMESTAMP
 );
@@ -154,10 +152,11 @@ CREATE TABLE reservations (
     quote_id      UUID UNIQUE NOT NULL REFERENCES quotes(id) ON DELETE CASCADE,
     client_id     UUID NOT NULL REFERENCES clients(id) ON DELETE CASCADE,
     status        reservation_status_enum NOT NULL DEFAULT 'PROGRAMADA',
-    scheduled_for DATE,
+    scheduled_for TEXT,
     location      TEXT NOT NULL,
     notes         TEXT,
     progress_pct  NUMERIC(5,2) NOT NULL DEFAULT 0,
+    created_by    UUID REFERENCES users(id) ON DELETE SET NULL,
     created_at    TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at    TIMESTAMP
 );
@@ -204,12 +203,13 @@ CREATE TABLE invoices (
     id               UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     reservation_id   UUID UNIQUE NOT NULL REFERENCES reservations(id) ON DELETE CASCADE,
     client_id        UUID NOT NULL REFERENCES clients(id) ON DELETE CASCADE,
-    issue_date       DATE NOT NULL DEFAULT CURRENT_DATE,
+    issue_date       TEXT NOT NULL,
     status           invoice_status_enum NOT NULL DEFAULT 'EMITIDA',
     subtotal         NUMERIC(12,2) NOT NULL DEFAULT 0,
     tax_total        NUMERIC(12,2) NOT NULL DEFAULT 0,
     additional_costs NUMERIC(12,2) NOT NULL DEFAULT 0,
     total            NUMERIC(12,2) NOT NULL DEFAULT 0,
+    created_by       UUID REFERENCES users(id) ON DELETE SET NULL,
     created_at       TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at       TIMESTAMP
 );

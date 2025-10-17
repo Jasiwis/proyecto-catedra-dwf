@@ -19,12 +19,15 @@ import { getAssignmentsByQuote } from "../../api/ssignments";
 import { getTasksByAssignment } from "../../api/task";
 import { QuoteStatus } from "../../enums/quote-status.enum";
 import { Status } from "../../enums/status.enum";
+import { useRole } from "../../hooks/use-role";
+import { UserTypeLabels } from "../../enums/user-type.enum";
 
 const { Title } = Typography;
 
 const Dashboard: React.FC = () => {
   const navigate = useNavigate();
   const { isAuthenticated, user, logout } = useAuth();
+  const { userType } = useRole();
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({
     totalQuotes: 0,
@@ -40,6 +43,25 @@ const Dashboard: React.FC = () => {
     totalAssignments: 0,
     totalTasks: 0,
   });
+
+  useEffect(() => {
+    // Redirigir según el rol del usuario
+    if (userType) {
+      switch (userType) {
+        case "ADMIN":
+          navigate("/dashboard/admin/quotes");
+          break;
+        case "CLIENT":
+          navigate("/dashboard/client/quotes");
+          break;
+        case "EMPLOYEE":
+          navigate("/dashboard/employee/tasks");
+          break;
+        default:
+          navigate("/dashboard/admin/quotes");
+      }
+    }
+  }, [userType, navigate]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -142,6 +164,27 @@ const Dashboard: React.FC = () => {
         <Title level={2} className="mb-8">
           Dashboard
         </Title>
+
+        {/* User Info Card */}
+        <Row gutter={[16, 16]} className="mb-8">
+          <Col xs={24} sm={12} lg={6}>
+            <Card>
+              <div className="text-center">
+                <UserOutlined className="text-4xl text-blue-600 mb-2" />
+                <div className="text-lg font-semibold text-gray-900">
+                  {user?.name}
+                </div>
+                <div className="text-sm text-gray-600">{user?.email}</div>
+                <div className="mt-2">
+                  <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">
+                    {userType &&
+                      UserTypeLabels[userType as keyof typeof UserTypeLabels]}
+                  </span>
+                </div>
+              </div>
+            </Card>
+          </Col>
+        </Row>
 
         {/* Quotes Stats */}
         <Row gutter={[16, 16]} className="mb-8">
