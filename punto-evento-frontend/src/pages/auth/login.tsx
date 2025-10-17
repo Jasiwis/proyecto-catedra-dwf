@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../../hooks/use-auth";
+import { useRole } from "../../hooks/use-role";
+import { getDashboardRoute } from "../../utils/dashboard-routes.util";
 import { getErrorFromResponse } from "../../utils/get-errror-from-response.util";
 import { AxiosError } from "axios";
 import {
@@ -10,7 +12,6 @@ import {
   FormInput,
   FormButton,
 } from "../../components/Forms/AuthForm";
-import Header from "../../components/Header/Header";
 
 export default function Login() {
   const [username, setUsername] = useState("");
@@ -19,12 +20,14 @@ export default function Login() {
   const navigate = useNavigate();
 
   const { login, isAuthenticated } = useAuth();
+  const { userType } = useRole();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
       await login(username, password);
-      navigate("/dashboard", { replace: true });
+      const dashboardRoute = userType ? getDashboardRoute(userType) : "/";
+      navigate(dashboardRoute, { replace: true });
     } catch (e) {
       if (e instanceof AxiosError) {
         setError(getErrorFromResponse(e.response?.data));
@@ -36,11 +39,6 @@ export default function Login() {
 
   return (
     <div className="min-h-screen flex flex-col bg-[#eaf1fb]">
-      <Header
-        isAuthenticated={isAuthenticated}
-        userName={undefined}
-        onLogout={() => {}}
-      />
       <div className="flex flex-1 items-center justify-center bg-gradient-to-b from-[#7da2c1] to-[#eaf1fb]">
         <div className="w-full max-w-md">
           <AuthHeader

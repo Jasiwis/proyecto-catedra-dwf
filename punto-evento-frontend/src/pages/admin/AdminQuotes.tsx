@@ -11,17 +11,9 @@ import {
   Form,
   InputNumber,
 } from "antd";
-import {
-  EyeOutlined,
-  EditOutlined,
-  CheckOutlined,
-  DollarOutlined,
-} from "@ant-design/icons";
-import Header from "../../components/Header/Header";
-import { useAuth } from "../../hooks/use-auth";
+import { EyeOutlined, CheckOutlined, DollarOutlined } from "@ant-design/icons";
 import dayjs from "dayjs";
-
-const { TextArea } = Input;
+import { getAllQuotations } from "../../api/quote";
 
 interface QuoteData {
   id: string;
@@ -46,8 +38,21 @@ interface QuoteItem {
   total: number;
 }
 
+interface ApiQuote {
+  id: string;
+  requestId?: string;
+  client?: { name?: string };
+  startDate?: string;
+  location?: string;
+  status?: string;
+  subtotal?: number;
+  taxTotal?: number;
+  additionalCosts?: number;
+  total?: number;
+  createdAt?: string;
+}
+
 const AdminQuotes: React.FC = () => {
-  const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [quotes, setQuotes] = useState<QuoteData[]>([]);
   const [modalVisible, setModalVisible] = useState(false);
@@ -61,65 +66,29 @@ const AdminQuotes: React.FC = () => {
   const fetchQuotes = async () => {
     try {
       setLoading(true);
-      // Aquí harías la llamada a la API para obtener todas las cotizaciones
-      // const response = await getAllQuotes();
-      // setQuotes(response.data);
-
-      // Datos de ejemplo
-      setQuotes([
-        {
-          id: "1",
-          requestId: "1",
-          clientName: "Juan Pérez González",
-          eventDate: "2024-12-25",
-          location: "Hotel Real Intercontinental",
-          status: "PENDIENTE",
-          subtotal: 0,
-          taxTotal: 0,
-          additionalCosts: 0,
-          total: 0,
-          createdAt: "2024-10-15T10:30:00Z",
-          items: [],
-        },
-        {
-          id: "2",
-          requestId: "2",
-          clientName: "María Rodríguez",
-          eventDate: "2024-12-20",
-          location: "Centro de Convenciones",
-          status: "APROBADA",
-          subtotal: 1800.0,
-          taxTotal: 270.0,
-          additionalCosts: 50.0,
-          total: 2120.0,
-          createdAt: "2024-10-14T14:20:00Z",
-          items: [
-            {
-              id: "1",
-              description: "Servicio de Música",
-              quantity: 1,
-              unitPrice: 600.0,
-              total: 600.0,
-            },
-            {
-              id: "2",
-              description: "Servicio de Catering (30 personas)",
-              quantity: 30,
-              unitPrice: 35.0,
-              total: 1050.0,
-            },
-            {
-              id: "3",
-              description: "Mobiliario básico",
-              quantity: 1,
-              unitPrice: 150.0,
-              total: 150.0,
-            },
-          ],
-        },
-      ]);
-    } catch (error) {
-      message.error("Error al cargar las cotizaciones");
+      const response = await getAllQuotations();
+      const quotesData = response.data.map((quote: ApiQuote) => ({
+        id: quote.id,
+        requestId: quote.requestId || "",
+        clientName: quote.client?.name || "Cliente no disponible",
+        eventDate: quote.startDate || "",
+        location: quote.location || "",
+        status: (quote.status || "PENDIENTE") as
+          | "PENDIENTE"
+          | "APROBADA"
+          | "RECHAZADA",
+        subtotal: quote.subtotal || 0,
+        taxTotal: quote.taxTotal || 0,
+        additionalCosts: quote.additionalCosts || 0,
+        total: quote.total || 0,
+        createdAt: quote.createdAt || new Date().toISOString(),
+        items: [], // Por ahora vacío, se puede expandir después
+      }));
+      setQuotes(quotesData);
+    } catch (error: unknown) {
+      const errorMessage =
+        error instanceof Error ? error.message : "Error desconocido";
+      message.error(`Error al cargar las cotizaciones: ${errorMessage}`);
     } finally {
       setLoading(false);
     }
@@ -133,38 +102,32 @@ const AdminQuotes: React.FC = () => {
     setModalVisible(true);
   };
 
-  const handleSaveQuote = async (values: any) => {
+  const handleSaveQuote = async () => {
     try {
       setLoading(true);
 
-      const quoteData = {
-        id: selectedQuote?.id,
-        items: values.items,
-        additionalCosts: values.additionalCosts || 0,
-      };
-
       // Aquí harías la llamada a la API para guardar la cotización
-      // await saveQuote(quoteData);
+      // await saveQuote(values);
 
       message.success("Cotización guardada exitosamente");
       fetchQuotes();
       setModalVisible(false);
-    } catch (error) {
+    } catch {
       message.error("Error al guardar la cotización");
     } finally {
       setLoading(false);
     }
   };
 
-  const handleConvertToReservation = async (quoteId: string) => {
+  const handleConvertToReservation = async () => {
     try {
       setLoading(true);
       // Aquí harías la llamada a la API para convertir a reserva
-      // await convertToReservation(quoteId);
+      // await convertToReservation(selectedQuote?.id);
 
       message.success("Cotización convertida a reserva exitosamente");
       fetchQuotes();
-    } catch (error) {
+    } catch {
       message.error("Error al convertir la cotización");
     } finally {
       setLoading(false);
@@ -228,7 +191,7 @@ const AdminQuotes: React.FC = () => {
     {
       title: "Acciones",
       key: "actions",
-      render: (_, record: QuoteData) => (
+      render: (_: unknown, record: QuoteData) => (
         <Space>
           <Button
             type="link"
@@ -241,7 +204,7 @@ const AdminQuotes: React.FC = () => {
             <Button
               type="link"
               icon={<CheckOutlined />}
-              onClick={() => handleConvertToReservation(record.id)}
+              onClick={handleConvertToReservation}
               className="text-green-600"
             >
               Convertir a Reserva
@@ -253,181 +216,173 @@ const AdminQuotes: React.FC = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Header
-        isAuthenticated={true}
-        userName={user?.name}
-        onLogout={() => {}}
-      />
+    <div className="container mx-auto px-4 py-8">
+      <div className="mb-6">
+        <h1 className="text-3xl font-bold text-gray-900 mb-2">
+          Gestión de Cotizaciones
+        </h1>
+        <p className="text-gray-600">
+          Revisa, edita y gestiona todas las cotizaciones del sistema
+        </p>
+      </div>
 
-      <div className="container mx-auto px-4 py-8">
-        <div className="mb-6">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            Gestión de Cotizaciones
-          </h1>
-          <p className="text-gray-600">
-            Revisa, edita y gestiona todas las cotizaciones del sistema
-          </p>
-        </div>
+      <Card title="Lista de Cotizaciones">
+        <Table
+          columns={columns}
+          dataSource={quotes}
+          rowKey="id"
+          loading={loading}
+          pagination={{
+            pageSize: 10,
+            showSizeChanger: true,
+            showQuickJumper: true,
+          }}
+        />
+      </Card>
 
-        <Card title="Lista de Cotizaciones">
-          <Table
-            columns={columns}
-            dataSource={quotes}
-            rowKey="id"
-            loading={loading}
-            pagination={{
-              pageSize: 10,
-              showSizeChanger: true,
-              showQuickJumper: true,
-            }}
-          />
-        </Card>
-
-        {/* Modal de Edición de Cotización */}
-        <Modal
-          title={`Editar Cotización - ${selectedQuote?.clientName}`}
-          open={modalVisible}
-          onCancel={() => setModalVisible(false)}
-          width={800}
-          footer={null}
-        >
-          {selectedQuote && (
-            <Form form={form} layout="vertical" onFinish={handleSaveQuote}>
-              {/* Información del Evento */}
-              <div className="mb-6 p-4 bg-gray-50 rounded-lg">
-                <h4 className="font-semibold mb-2">Información del Evento</h4>
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div>
-                    <strong>Cliente:</strong> {selectedQuote.clientName}
-                  </div>
-                  <div>
-                    <strong>Fecha:</strong>{" "}
-                    {dayjs(selectedQuote.eventDate).format("DD/MM/YYYY")}
-                  </div>
-                  <div>
-                    <strong>Ubicación:</strong> {selectedQuote.location}
-                  </div>
-                  <div>
-                    <strong>Estado:</strong>{" "}
-                    <Tag color={getStatusColor(selectedQuote.status)}>
-                      {selectedQuote.status}
-                    </Tag>
-                  </div>
+      {/* Modal de Edición de Cotización */}
+      <Modal
+        title={`Editar Cotización - ${selectedQuote?.clientName}`}
+        open={modalVisible}
+        onCancel={() => setModalVisible(false)}
+        width={800}
+        footer={null}
+      >
+        {selectedQuote && (
+          <Form form={form} layout="vertical" onFinish={handleSaveQuote}>
+            {/* Información del Evento */}
+            <div className="mb-6 p-4 bg-gray-50 rounded-lg">
+              <h4 className="font-semibold mb-2">Información del Evento</h4>
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <strong>Cliente:</strong> {selectedQuote.clientName}
+                </div>
+                <div>
+                  <strong>Fecha:</strong>{" "}
+                  {dayjs(selectedQuote.eventDate).format("DD/MM/YYYY")}
+                </div>
+                <div>
+                  <strong>Ubicación:</strong> {selectedQuote.location}
+                </div>
+                <div>
+                  <strong>Estado:</strong>{" "}
+                  <Tag color={getStatusColor(selectedQuote.status)}>
+                    {selectedQuote.status}
+                  </Tag>
                 </div>
               </div>
+            </div>
 
-              {/* Items de la Cotización */}
-              <Form.List name="items">
-                {(fields, { add, remove }) => (
-                  <div>
-                    <div className="flex justify-between items-center mb-4">
-                      <h4 className="font-semibold">Servicios</h4>
-                      <Button
-                        type="dashed"
-                        onClick={() => add()}
-                        icon={<DollarOutlined />}
-                      >
-                        Agregar Servicio
-                      </Button>
-                    </div>
+            {/* Items de la Cotización */}
+            <Form.List name="items">
+              {(fields, { add, remove }) => (
+                <div>
+                  <div className="flex justify-between items-center mb-4">
+                    <h4 className="font-semibold">Servicios</h4>
+                    <Button
+                      type="dashed"
+                      onClick={() => add()}
+                      icon={<DollarOutlined />}
+                    >
+                      Agregar Servicio
+                    </Button>
+                  </div>
 
-                    {fields.map(({ key, name, ...restField }) => (
-                      <div key={key} className="border p-4 rounded mb-4">
-                        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                          <Form.Item
-                            {...restField}
-                            name={[name, "description"]}
-                            label="Descripción"
-                            rules={[
-                              {
-                                required: true,
-                                message: "Ingresa la descripción",
-                              },
-                            ]}
+                  {fields.map(({ key, name, ...restField }) => (
+                    <div key={key} className="border p-4 rounded mb-4">
+                      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                        <Form.Item
+                          {...restField}
+                          name={[name, "description"]}
+                          label="Descripción"
+                          rules={[
+                            {
+                              required: true,
+                              message: "Ingresa la descripción",
+                            },
+                          ]}
+                        >
+                          <Input placeholder="Descripción del servicio" />
+                        </Form.Item>
+
+                        <Form.Item
+                          {...restField}
+                          name={[name, "quantity"]}
+                          label="Cantidad"
+                          rules={[
+                            {
+                              required: true,
+                              message: "Ingresa la cantidad",
+                            },
+                          ]}
+                        >
+                          <InputNumber
+                            min={1}
+                            placeholder="1"
+                            className="w-full"
+                          />
+                        </Form.Item>
+
+                        <Form.Item
+                          {...restField}
+                          name={[name, "unitPrice"]}
+                          label="Precio Unit."
+                          rules={[
+                            {
+                              required: true,
+                              message: "Ingresa el precio unitario",
+                            },
+                          ]}
+                        >
+                          <InputNumber
+                            min={0}
+                            step={0.01}
+                            placeholder="0.00"
+                            className="w-full"
+                          />
+                        </Form.Item>
+
+                        <div className="flex items-end">
+                          <Button
+                            type="link"
+                            danger
+                            onClick={() => remove(name)}
                           >
-                            <Input placeholder="Descripción del servicio" />
-                          </Form.Item>
-
-                          <Form.Item
-                            {...restField}
-                            name={[name, "quantity"]}
-                            label="Cantidad"
-                            rules={[
-                              {
-                                required: true,
-                                message: "Ingresa la cantidad",
-                              },
-                            ]}
-                          >
-                            <InputNumber
-                              min={1}
-                              placeholder="1"
-                              className="w-full"
-                            />
-                          </Form.Item>
-
-                          <Form.Item
-                            {...restField}
-                            name={[name, "unitPrice"]}
-                            label="Precio Unit."
-                            rules={[
-                              {
-                                required: true,
-                                message: "Ingresa el precio unitario",
-                              },
-                            ]}
-                          >
-                            <InputNumber
-                              min={0}
-                              step={0.01}
-                              placeholder="0.00"
-                              className="w-full"
-                            />
-                          </Form.Item>
-
-                          <div className="flex items-end">
-                            <Button
-                              type="link"
-                              danger
-                              onClick={() => remove(name)}
-                            >
-                              Eliminar
-                            </Button>
-                          </div>
+                            Eliminar
+                          </Button>
                         </div>
                       </div>
-                    ))}
-                  </div>
-                )}
-              </Form.List>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </Form.List>
 
-              {/* Costos Adicionales */}
-              <Form.Item
-                name="additionalCosts"
-                label="Costos Adicionales"
-                initialValue={selectedQuote.additionalCosts}
-              >
-                <InputNumber
-                  min={0}
-                  step={0.01}
-                  placeholder="0.00"
-                  className="w-full"
-                  prefix="$"
-                />
-              </Form.Item>
+            {/* Costos Adicionales */}
+            <Form.Item
+              name="additionalCosts"
+              label="Costos Adicionales"
+              initialValue={selectedQuote.additionalCosts}
+            >
+              <InputNumber
+                min={0}
+                step={0.01}
+                placeholder="0.00"
+                className="w-full"
+                prefix="$"
+              />
+            </Form.Item>
 
-              {/* Botones */}
-              <div className="flex justify-end space-x-2 pt-4">
-                <Button onClick={() => setModalVisible(false)}>Cancelar</Button>
-                <Button type="primary" htmlType="submit" loading={loading}>
-                  Guardar Cotización
-                </Button>
-              </div>
-            </Form>
-          )}
-        </Modal>
-      </div>
+            {/* Botones */}
+            <div className="flex justify-end space-x-2 pt-4">
+              <Button onClick={() => setModalVisible(false)}>Cancelar</Button>
+              <Button type="primary" htmlType="submit" loading={loading}>
+                Guardar Cotización
+              </Button>
+            </div>
+          </Form>
+        )}
+      </Modal>
     </div>
   );
 };

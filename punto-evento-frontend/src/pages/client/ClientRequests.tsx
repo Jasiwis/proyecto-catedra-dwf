@@ -12,13 +12,11 @@ import {
   Space,
   Modal,
 } from "antd";
-import { PlusOutlined, EyeOutlined, EditOutlined } from "@ant-design/icons";
-import Header from "../../components/Header/Header";
+import { PlusOutlined, EyeOutlined } from "@ant-design/icons";
 import { useAuth } from "../../hooks/use-auth";
 import dayjs from "dayjs";
 
 const { TextArea } = Input;
-const { Option } = Select;
 
 interface RequestData {
   id: string;
@@ -167,12 +165,6 @@ const ClientRequests: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Header
-        isAuthenticated={true}
-        userName={user?.name}
-        onLogout={() => {}}
-      />
-
       <div className="container mx-auto px-4 py-8">
         <div className="mb-6">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">

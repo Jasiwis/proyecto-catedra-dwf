@@ -25,8 +25,6 @@ import {
   CheckCircleOutlined,
   CloseCircleOutlined,
 } from "@ant-design/icons";
-import Header from "../../components/Header/Header";
-import { useAuth } from "../../hooks/use-auth";
 import type {
   ClientResponse,
   ClientDto,

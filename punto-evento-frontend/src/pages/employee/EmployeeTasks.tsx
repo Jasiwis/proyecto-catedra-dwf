@@ -19,9 +19,10 @@ import {
   UserOutlined,
   FileTextOutlined,
 } from "@ant-design/icons";
-import Header from "../../components/Header/Header";
 import { useAuth } from "../../hooks/use-auth";
 import dayjs from "dayjs";
+import { tasksApi, Task } from "../../api/task";
+import { getErrorFromResponse } from "../../utils/get-errror-from-response.util";
 
 interface TaskData {
   id: string;
@@ -55,65 +56,35 @@ const EmployeeTasks: React.FC = () => {
   const fetchTasks = async () => {
     try {
       setLoading(true);
-      // Aquí harías la llamada a la API para obtener las tareas del empleado
-      // const response = await getEmployeeTasks(user?.id);
-      // setTasks(response.data);
-
-      // Datos de ejemplo
-      setTasks([
-        {
-          id: "1",
-          title: "Instalación de equipo de sonido",
-          description:
-            "Configurar y probar el sistema de audio para el evento corporativo",
-          status: "EN_PROCESO",
-          priority: "ALTA",
-          assignedDate: "2024-10-15T08:00:00Z",
-          dueDate: "2024-12-25T10:00:00Z",
+      if (user?.id) {
+        const response = await tasksApi.getTasksByEmployee(user.id);
+        const tasksData = response.data.map((task: Task) => ({
+          id: task.id,
+          title: task.title,
+          description: task.description || "",
+          status: task.status,
+          priority: "MEDIA", // Por ahora fijo, se puede expandir después
+          assignedDate: task.createdAt,
+          dueDate: task.endDatetime || task.createdAt,
+          completedAt: task.completedAt,
           reservation: {
-            id: "1",
-            clientName: "Empresa Ejemplo S.A. de C.V.",
-            eventDate: "2024-12-25",
-            location: "Hotel Real Intercontinental",
+            id: task.reservationId,
+            clientName: task.employeeName || "Cliente no disponible",
+            eventDate: task.startDatetime || task.createdAt,
+            location: "Ubicación no disponible",
           },
-          progress: 65,
-        },
-        {
-          id: "2",
-          title: "Entrega de mobiliario",
-          description: "Entregar y colocar mesas y sillas para el evento",
-          status: "PENDIENTE",
-          priority: "MEDIA",
-          assignedDate: "2024-10-16T09:00:00Z",
-          dueDate: "2024-12-25T09:00:00Z",
-          reservation: {
-            id: "1",
-            clientName: "Empresa Ejemplo S.A. de C.V.",
-            eventDate: "2024-12-25",
-            location: "Hotel Real Intercontinental",
-          },
-          progress: 0,
-        },
-        {
-          id: "3",
-          title: "Coordinación con catering",
-          description: "Verificar que el servicio de catering esté listo",
-          status: "COMPLETADA",
-          priority: "BAJA",
-          assignedDate: "2024-10-10T10:00:00Z",
-          dueDate: "2024-12-20T17:00:00Z",
-          completedAt: "2024-10-17T14:30:00Z",
-          reservation: {
-            id: "2",
-            clientName: "Juan Pérez González",
-            eventDate: "2024-12-20",
-            location: "Centro de Convenciones",
-          },
-          progress: 100,
-        },
-      ]);
+          progress:
+            task.status === "COMPLETADA"
+              ? 100
+              : task.status === "EN_PROGRESO"
+              ? 50
+              : 0,
+        }));
+        setTasks(tasksData);
+      }
     } catch (error) {
-      message.error("Error al cargar las tareas");
+      const errorMessage = getErrorFromResponse(error);
+      message.error(`Error al cargar las tareas: ${errorMessage}`);
     } finally {
       setLoading(false);
     }
@@ -127,13 +98,12 @@ const EmployeeTasks: React.FC = () => {
   const handleStartTask = async (taskId: string) => {
     try {
       setLoading(true);
-      // Aquí harías la llamada a la API para iniciar la tarea
-      // await startTask(taskId);
-
+      await tasksApi.updateTaskStatus(taskId, "EN_PROGRESO");
       message.success("Tarea iniciada");
       fetchTasks();
     } catch (error) {
-      message.error("Error al iniciar la tarea");
+      const errorMessage = getErrorFromResponse(error);
+      message.error(`Error al iniciar la tarea: ${errorMessage}`);
     } finally {
       setLoading(false);
     }
@@ -142,14 +112,13 @@ const EmployeeTasks: React.FC = () => {
   const handleCompleteTask = async (taskId: string) => {
     try {
       setLoading(true);
-      // Aquí harías la llamada a la API para completar la tarea
-      // await completeTask(taskId);
-
+      await tasksApi.updateTaskStatus(taskId, "COMPLETADA");
       message.success("Tarea completada exitosamente");
       fetchTasks();
       setModalVisible(false);
     } catch (error) {
-      message.error("Error al completar la tarea");
+      const errorMessage = getErrorFromResponse(error);
+      message.error(`Error al completar la tarea: ${errorMessage}`);
     } finally {
       setLoading(false);
     }
@@ -285,219 +254,207 @@ const EmployeeTasks: React.FC = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Header
-        isAuthenticated={true}
-        userName={user?.name}
-        onLogout={() => {}}
-      />
-
-      <div className="container mx-auto px-4 py-8">
-        <div className="mb-6">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Mis Tareas</h1>
-          <p className="text-gray-600">
-            Gestiona y completa las tareas asignadas a ti
-          </p>
-        </div>
-
-        {/* Resumen de Tareas */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-          <Card>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-orange-600">
-                {tasks.filter((t) => t.status === "PENDIENTE").length}
-              </div>
-              <div className="text-sm text-gray-600">Pendientes</div>
-            </div>
-          </Card>
-          <Card>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-blue-600">
-                {tasks.filter((t) => t.status === "EN_PROCESO").length}
-              </div>
-              <div className="text-sm text-gray-600">En Proceso</div>
-            </div>
-          </Card>
-          <Card>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-green-600">
-                {tasks.filter((t) => t.status === "COMPLETADA").length}
-              </div>
-              <div className="text-sm text-gray-600">Completadas</div>
-            </div>
-          </Card>
-          <Card>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-gray-600">
-                {tasks.length}
-              </div>
-              <div className="text-sm text-gray-600">Total</div>
-            </div>
-          </Card>
-        </div>
-
-        <Card title="Lista de Tareas">
-          <Table
-            columns={columns}
-            dataSource={tasks}
-            rowKey="id"
-            loading={loading}
-            pagination={{
-              pageSize: 10,
-              showSizeChanger: true,
-              showQuickJumper: true,
-            }}
-          />
-        </Card>
-
-        {/* Modal de Detalles de Tarea */}
-        <Modal
-          title="Detalles de la Tarea"
-          open={modalVisible}
-          onCancel={() => setModalVisible(false)}
-          width={700}
-          footer={
-            selectedTask?.status === "EN_PROCESO"
-              ? [
-                  <Button
-                    key="complete"
-                    type="primary"
-                    onClick={() => handleCompleteTask(selectedTask.id)}
-                  >
-                    Marcar como Completada
-                  </Button>,
-                ]
-              : selectedTask?.status === "PENDIENTE"
-              ? [
-                  <Button
-                    key="start"
-                    type="primary"
-                    onClick={() => handleStartTask(selectedTask.id)}
-                  >
-                    Iniciar Tarea
-                  </Button>,
-                ]
-              : [
-                  <Button key="close" onClick={() => setModalVisible(false)}>
-                    Cerrar
-                  </Button>,
-                ]
-          }
-        >
-          {selectedTask && (
-            <div className="space-y-6">
-              {/* Información de la Tarea */}
-              <Descriptions title="Información de la Tarea" bordered column={1}>
-                <Descriptions.Item label="Título">
-                  {selectedTask.title}
-                </Descriptions.Item>
-                <Descriptions.Item label="Descripción">
-                  {selectedTask.description}
-                </Descriptions.Item>
-                <Descriptions.Item label="Estado">
-                  <Tag color={getStatusColor(selectedTask.status)}>
-                    {getStatusLabel(selectedTask.status)}
-                  </Tag>
-                </Descriptions.Item>
-                <Descriptions.Item label="Prioridad">
-                  <Tag color={getPriorityColor(selectedTask.priority)}>
-                    {selectedTask.priority}
-                  </Tag>
-                </Descriptions.Item>
-                <Descriptions.Item label="Progreso">
-                  <Progress
-                    percent={selectedTask.progress}
-                    status={
-                      selectedTask.status === "COMPLETADA"
-                        ? "success"
-                        : "active"
-                    }
-                  />
-                </Descriptions.Item>
-              </Descriptions>
-
-              {/* Información del Evento */}
-              <Descriptions title="Información del Evento" bordered column={1}>
-                <Descriptions.Item label="Cliente">
-                  {selectedTask.reservation.clientName}
-                </Descriptions.Item>
-                <Descriptions.Item label="Fecha del Evento">
-                  {dayjs(selectedTask.reservation.eventDate).format(
-                    "DD/MM/YYYY"
-                  )}
-                </Descriptions.Item>
-                <Descriptions.Item label="Ubicación">
-                  {selectedTask.reservation.location}
-                </Descriptions.Item>
-              </Descriptions>
-
-              {/* Timeline de la Tarea */}
-              <div>
-                <h4 className="text-lg font-semibold mb-3">
-                  Historial de la Tarea
-                </h4>
-                <Timeline
-                  items={[
-                    {
-                      color: "blue",
-                      children: (
-                        <div>
-                          <div className="font-semibold">Tarea Asignada</div>
-                          <div className="text-sm text-gray-500">
-                            {dayjs(selectedTask.assignedDate).format(
-                              "DD/MM/YYYY HH:mm"
-                            )}
-                          </div>
-                        </div>
-                      ),
-                    },
-                    ...(selectedTask.status === "EN_PROCESO" ||
-                    selectedTask.status === "COMPLETADA"
-                      ? [
-                          {
-                            color: "orange",
-                            children: (
-                              <div>
-                                <div className="font-semibold">
-                                  Tarea Iniciada
-                                </div>
-                                <div className="text-sm text-gray-500">
-                                  {dayjs(selectedTask.assignedDate).format(
-                                    "DD/MM/YYYY HH:mm"
-                                  )}
-                                </div>
-                              </div>
-                            ),
-                          },
-                        ]
-                      : []),
-                    ...(selectedTask.status === "COMPLETADA" &&
-                    selectedTask.completedAt
-                      ? [
-                          {
-                            color: "green",
-                            children: (
-                              <div>
-                                <div className="font-semibold">
-                                  Tarea Completada
-                                </div>
-                                <div className="text-sm text-gray-500">
-                                  {dayjs(selectedTask.completedAt).format(
-                                    "DD/MM/YYYY HH:mm"
-                                  )}
-                                </div>
-                              </div>
-                            ),
-                          },
-                        ]
-                      : []),
-                  ]}
-                />
-              </div>
-            </div>
-          )}
-        </Modal>
+    <div className="container mx-auto px-4 py-8">
+      <div className="mb-6">
+        <h1 className="text-3xl font-bold text-gray-900 mb-2">Mis Tareas</h1>
+        <p className="text-gray-600">
+          Gestiona y completa las tareas asignadas a ti
+        </p>
       </div>
+
+      {/* Resumen de Tareas */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+        <Card>
+          <div className="text-center">
+            <div className="text-2xl font-bold text-orange-600">
+              {tasks.filter((t) => t.status === "PENDIENTE").length}
+            </div>
+            <div className="text-sm text-gray-600">Pendientes</div>
+          </div>
+        </Card>
+        <Card>
+          <div className="text-center">
+            <div className="text-2xl font-bold text-blue-600">
+              {tasks.filter((t) => t.status === "EN_PROCESO").length}
+            </div>
+            <div className="text-sm text-gray-600">En Proceso</div>
+          </div>
+        </Card>
+        <Card>
+          <div className="text-center">
+            <div className="text-2xl font-bold text-green-600">
+              {tasks.filter((t) => t.status === "COMPLETADA").length}
+            </div>
+            <div className="text-sm text-gray-600">Completadas</div>
+          </div>
+        </Card>
+        <Card>
+          <div className="text-center">
+            <div className="text-2xl font-bold text-gray-600">
+              {tasks.length}
+            </div>
+            <div className="text-sm text-gray-600">Total</div>
+          </div>
+        </Card>
+      </div>
+
+      <Card title="Lista de Tareas">
+        <Table
+          columns={columns}
+          dataSource={tasks}
+          rowKey="id"
+          loading={loading}
+          pagination={{
+            pageSize: 10,
+            showSizeChanger: true,
+            showQuickJumper: true,
+          }}
+        />
+      </Card>
+
+      {/* Modal de Detalles de Tarea */}
+      <Modal
+        title="Detalles de la Tarea"
+        open={modalVisible}
+        onCancel={() => setModalVisible(false)}
+        width={700}
+        footer={
+          selectedTask?.status === "EN_PROCESO"
+            ? [
+                <Button
+                  key="complete"
+                  type="primary"
+                  onClick={() => handleCompleteTask(selectedTask.id)}
+                >
+                  Marcar como Completada
+                </Button>,
+              ]
+            : selectedTask?.status === "PENDIENTE"
+            ? [
+                <Button
+                  key="start"
+                  type="primary"
+                  onClick={() => handleStartTask(selectedTask.id)}
+                >
+                  Iniciar Tarea
+                </Button>,
+              ]
+            : [
+                <Button key="close" onClick={() => setModalVisible(false)}>
+                  Cerrar
+                </Button>,
+              ]
+        }
+      >
+        {selectedTask && (
+          <div className="space-y-6">
+            {/* Información de la Tarea */}
+            <Descriptions title="Información de la Tarea" bordered column={1}>
+              <Descriptions.Item label="Título">
+                {selectedTask.title}
+              </Descriptions.Item>
+              <Descriptions.Item label="Descripción">
+                {selectedTask.description}
+              </Descriptions.Item>
+              <Descriptions.Item label="Estado">
+                <Tag color={getStatusColor(selectedTask.status)}>
+                  {getStatusLabel(selectedTask.status)}
+                </Tag>
+              </Descriptions.Item>
+              <Descriptions.Item label="Prioridad">
+                <Tag color={getPriorityColor(selectedTask.priority)}>
+                  {selectedTask.priority}
+                </Tag>
+              </Descriptions.Item>
+              <Descriptions.Item label="Progreso">
+                <Progress
+                  percent={selectedTask.progress}
+                  status={
+                    selectedTask.status === "COMPLETADA" ? "success" : "active"
+                  }
+                />
+              </Descriptions.Item>
+            </Descriptions>
+
+            {/* Información del Evento */}
+            <Descriptions title="Información del Evento" bordered column={1}>
+              <Descriptions.Item label="Cliente">
+                {selectedTask.reservation.clientName}
+              </Descriptions.Item>
+              <Descriptions.Item label="Fecha del Evento">
+                {dayjs(selectedTask.reservation.eventDate).format("DD/MM/YYYY")}
+              </Descriptions.Item>
+              <Descriptions.Item label="Ubicación">
+                {selectedTask.reservation.location}
+              </Descriptions.Item>
+            </Descriptions>
+
+            {/* Timeline de la Tarea */}
+            <div>
+              <h4 className="text-lg font-semibold mb-3">
+                Historial de la Tarea
+              </h4>
+              <Timeline
+                items={[
+                  {
+                    color: "blue",
+                    children: (
+                      <div>
+                        <div className="font-semibold">Tarea Asignada</div>
+                        <div className="text-sm text-gray-500">
+                          {dayjs(selectedTask.assignedDate).format(
+                            "DD/MM/YYYY HH:mm"
+                          )}
+                        </div>
+                      </div>
+                    ),
+                  },
+                  ...(selectedTask.status === "EN_PROCESO" ||
+                  selectedTask.status === "COMPLETADA"
+                    ? [
+                        {
+                          color: "orange",
+                          children: (
+                            <div>
+                              <div className="font-semibold">
+                                Tarea Iniciada
+                              </div>
+                              <div className="text-sm text-gray-500">
+                                {dayjs(selectedTask.assignedDate).format(
+                                  "DD/MM/YYYY HH:mm"
+                                )}
+                              </div>
+                            </div>
+                          ),
+                        },
+                      ]
+                    : []),
+                  ...(selectedTask.status === "COMPLETADA" &&
+                  selectedTask.completedAt
+                    ? [
+                        {
+                          color: "green",
+                          children: (
+                            <div>
+                              <div className="font-semibold">
+                                Tarea Completada
+                              </div>
+                              <div className="text-sm text-gray-500">
+                                {dayjs(selectedTask.completedAt).format(
+                                  "DD/MM/YYYY HH:mm"
+                                )}
+                              </div>
+                            </div>
+                          ),
+                        },
+                      ]
+                    : []),
+                ]}
+              />
+            </div>
+          </div>
+        )}
+      </Modal>
     </div>
   );
 };

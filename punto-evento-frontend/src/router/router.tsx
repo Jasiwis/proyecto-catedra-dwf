@@ -4,19 +4,20 @@ import Error from "../pages/error";
 import { ProtectedRoute } from "../components/routes/protected-route";
 import Login from "../pages/auth/login";
 import Home from "../pages/home/home";
-import Dashboard from "../pages/dashboard/dashboard";
 import Register from "../pages/auth/register";
-import UsersManagement from "../pages/users/UsersManagement";
+import UsersManagement from "../pages/admin/UsersManagement";
 import RoleProtectedRoute from "../components/routes/role-protected-route";
 import { UserType } from "../enums/user-type.enum";
 
-// Nuevas páginas según el flujo funcional
+// Páginas según el flujo funcional
 import ClientRequests from "../pages/client/ClientRequests";
 import ClientQuotes from "../pages/client/ClientQuotes";
-import AdminDashboard from "../pages/admin/AdminDashboard";
+import ClientDashboard from "../pages/client/ClientDashboard";
 import AdminQuotes from "../pages/admin/AdminQuotes";
 import AdminReservations from "../pages/admin/AdminReservations";
+import AdminDashboard from "../pages/admin/AdminDashboard";
 import EmployeeTasks from "../pages/employee/EmployeeTasks";
+import EmployeeDashboard from "../pages/employee/EmployeeDashboard";
 
 export const router = createBrowserRouter([
   {
@@ -24,7 +25,11 @@ export const router = createBrowserRouter([
     children: [
       {
         path: "/",
-        element: <Home />,
+        element: (
+          <ProtectedRoute requireAuth={false}>
+            <Home />
+          </ProtectedRoute>
+        ),
       },
       {
         path: "/login",
@@ -42,21 +47,12 @@ export const router = createBrowserRouter([
           </ProtectedRoute>
         ),
       },
-      // Dashboard principal (redirige según rol)
-      {
-        path: "/dashboard",
-        element: (
-          <ProtectedRoute requireAuth={true}>
-            <Dashboard />
-          </ProtectedRoute>
-        ),
-      },
 
       // =========================
       // RUTAS PARA ADMINISTRADOR
       // =========================
       {
-        path: "/dashboard/admin",
+        path: "/admin/dashboard",
         element: (
           <RoleProtectedRoute allowedRoles={[UserType.ADMIN]}>
             <AdminDashboard />
@@ -64,7 +60,7 @@ export const router = createBrowserRouter([
         ),
       },
       {
-        path: "/dashboard/admin/quotes",
+        path: "/admin/quotes",
         element: (
           <RoleProtectedRoute allowedRoles={[UserType.ADMIN]}>
             <AdminQuotes />
@@ -72,7 +68,7 @@ export const router = createBrowserRouter([
         ),
       },
       {
-        path: "/dashboard/admin/reservations",
+        path: "/admin/reservations",
         element: (
           <RoleProtectedRoute allowedRoles={[UserType.ADMIN]}>
             <AdminReservations />
@@ -80,7 +76,7 @@ export const router = createBrowserRouter([
         ),
       },
       {
-        path: "/dashboard/users",
+        path: "/admin/users",
         element: (
           <RoleProtectedRoute allowedRoles={[UserType.ADMIN]}>
             <UsersManagement />
@@ -92,7 +88,15 @@ export const router = createBrowserRouter([
       // RUTAS PARA CLIENTES
       // =========================
       {
-        path: "/dashboard/client/requests",
+        path: "/client/dashboard",
+        element: (
+          <RoleProtectedRoute allowedRoles={[UserType.CLIENT]}>
+            <ClientDashboard />
+          </RoleProtectedRoute>
+        ),
+      },
+      {
+        path: "/client/requests",
         element: (
           <RoleProtectedRoute allowedRoles={[UserType.CLIENT]}>
             <ClientRequests />
@@ -100,7 +104,7 @@ export const router = createBrowserRouter([
         ),
       },
       {
-        path: "/dashboard/client/quotes",
+        path: "/client/quotes",
         element: (
           <RoleProtectedRoute allowedRoles={[UserType.CLIENT]}>
             <ClientQuotes />
@@ -112,7 +116,15 @@ export const router = createBrowserRouter([
       // RUTAS PARA EMPLEADOS
       // =========================
       {
-        path: "/dashboard/employee/tasks",
+        path: "/employee/dashboard",
+        element: (
+          <RoleProtectedRoute allowedRoles={[UserType.EMPLOYEE]}>
+            <EmployeeDashboard />
+          </RoleProtectedRoute>
+        ),
+      },
+      {
+        path: "/employee/tasks",
         element: (
           <RoleProtectedRoute allowedRoles={[UserType.EMPLOYEE]}>
             <EmployeeTasks />

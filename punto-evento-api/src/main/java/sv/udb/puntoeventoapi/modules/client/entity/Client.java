@@ -35,7 +35,7 @@ public class Client {
     @Enumerated(EnumType.STRING)
     private Status status;
 
-    @OneToOne
+    @OneToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "user_id")
     private sv.udb.puntoeventoapi.modules.user.entity.User user;
 

@@ -10,8 +10,6 @@ import {
   FormButton,
 } from "../../components/Forms/AuthForm";
 import { register } from "../../api/auth";
-import { useAuth } from "../../hooks/use-auth";
-import Header from "../../components/Header/Header";
 
 export default function Register() {
   const [name, setName] = useState("");
@@ -20,7 +18,6 @@ export default function Register() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState("");
   const navigate = useNavigate();
-  const { isAuthenticated } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -44,11 +41,6 @@ export default function Register() {
 
   return (
     <div className="min-h-screen flex flex-col bg-[#eaf1fb]">
-      <Header
-        isAuthenticated={isAuthenticated}
-        userName={undefined}
-        onLogout={() => {}}
-      />
       <div className="flex flex-1 items-center justify-center bg-gradient-to-b from-[#7da2c1] to-[#eaf1fb]">
         <div className="w-full max-w-md">
           <AuthHeader

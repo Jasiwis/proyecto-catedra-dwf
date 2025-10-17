@@ -3,8 +3,8 @@ import { Avatar, Dropdown } from "antd";
 import {
   UserOutlined,
   LogoutOutlined,
-  DashboardOutlined,
   HomeOutlined,
+  DashboardOutlined,
   FileTextOutlined,
   TeamOutlined,
   CalendarOutlined,
@@ -14,6 +14,7 @@ import {
 import type { MenuProps } from "antd";
 import { Button } from "../Buttons/Button";
 import { useRole } from "../../hooks/use-role";
+import { getDashboardRoute } from "../../utils/dashboard-routes.util";
 
 interface HeaderProps {
   isAuthenticated: boolean;
@@ -36,11 +37,6 @@ const Header: React.FC<HeaderProps> = ({
 
   const items: MenuProps["items"] = [
     {
-      key: "dashboard",
-      icon: <DashboardOutlined />,
-      label: <Link to="/dashboard">Dashboard</Link>,
-    },
-    {
       key: "home",
       icon: <HomeOutlined />,
       label: <Link to="/">Home</Link>,
@@ -54,15 +50,28 @@ const Header: React.FC<HeaderProps> = ({
   ];
 
   // Menú expandido según el rol del usuario
-  const getMenuItemsByRole = () => {
-    const baseItems = [
-      {
-        key: "Dashboard",
+  const getMenuItemsByRole = (): Array<{
+    key: string;
+    icon: React.ReactNode;
+    label: string;
+    to: string;
+  }> => {
+    const baseItems: Array<{
+      key: string;
+      icon: React.ReactNode;
+      label: string;
+      to: string;
+    }> = [];
+
+    // Agregar Dashboard para todos los roles autenticados
+    if (userType) {
+      baseItems.push({
+        key: "dashboard",
         icon: <DashboardOutlined />,
         label: "Dashboard",
-        to: "/dashboard",
-      },
-    ];
+        to: getDashboardRoute(userType),
+      });
+    }
 
     if (isAdmin) {
       return [
@@ -71,19 +80,19 @@ const Header: React.FC<HeaderProps> = ({
           key: "quotes",
           icon: <FileTextOutlined />,
           label: "Cotizaciones",
-          to: "/dashboard/admin/quotes",
+          to: "/admin/quotes",
         },
         {
           key: "reservations",
           icon: <CalendarOutlined />,
           label: "Reservas",
-          to: "/dashboard/admin/reservations",
+          to: "/admin/reservations",
         },
         {
           key: "users",
           icon: <TeamOutlined />,
           label: "Usuarios",
-          to: "/dashboard/users",
+          to: "/admin/users",
         },
       ];
     }
@@ -95,13 +104,13 @@ const Header: React.FC<HeaderProps> = ({
           key: "requests",
           icon: <PlusOutlined />,
           label: "Nueva Solicitud",
-          to: "/dashboard/client/requests",
+          to: "/client/requests",
         },
         {
           key: "quotes",
           icon: <FileTextOutlined />,
           label: "Mis Cotizaciones",
-          to: "/dashboard/client/quotes",
+          to: "/client/quotes",
         },
       ];
     }
@@ -113,7 +122,7 @@ const Header: React.FC<HeaderProps> = ({
           key: "tasks",
           icon: <CheckSquareOutlined />,
           label: "Mis Tareas",
-          to: "/dashboard/employee/tasks",
+          to: "/employee/tasks",
         },
       ];
     }

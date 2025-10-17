@@ -8,7 +8,6 @@ import {
   FileTextOutlined,
   CloseCircleOutlined,
 } from "@ant-design/icons";
-import Header from "../../components/Header/Header";
 import { useAuth } from "../../hooks/use-auth";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -16,7 +15,7 @@ import { getAllQuotations } from "../../api/quote";
 import { getAllClients } from "../../api/clients";
 import { getAllEmployees } from "../../api/employee";
 import { getAssignmentsByQuote } from "../../api/ssignments";
-import { getTasksByAssignment } from "../../api/task";
+import { tasksApi } from "../../api/task";
 import { QuoteStatus } from "../../enums/quote-status.enum";
 import { Status } from "../../enums/status.enum";
 import { useRole } from "../../hooks/use-role";
@@ -26,7 +25,7 @@ const { Title } = Typography;
 
 const Dashboard: React.FC = () => {
   const navigate = useNavigate();
-  const { isAuthenticated, user, logout } = useAuth();
+  const { user } = useAuth();
   const { userType } = useRole();
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({
@@ -114,10 +113,9 @@ const Dashboard: React.FC = () => {
           const assignments = assignmentsRes.data;
           totalAssignments += assignments.length;
 
-          for (const assignment of assignments) {
-            const tasksRes = await getTasksByAssignment(assignment.id);
-            totalTasks += tasksRes.data.length;
-          }
+          // Por ahora usamos getAllTasks ya que la estructura cambió
+          const tasksRes = await tasksApi.getAllTasks();
+          totalTasks += tasksRes.data.length;
         }
 
         setStats({
@@ -153,181 +151,173 @@ const Dashboard: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Header
-        isAuthenticated={isAuthenticated}
-        userName={user?.name}
-        onLogout={logout}
-      />
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <Title level={2} className="mb-8">
+        Dashboard
+      </Title>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <Title level={2} className="mb-8">
-          Dashboard
-        </Title>
-
-        {/* User Info Card */}
-        <Row gutter={[16, 16]} className="mb-8">
-          <Col xs={24} sm={12} lg={6}>
-            <Card>
-              <div className="text-center">
-                <UserOutlined className="text-4xl text-blue-600 mb-2" />
-                <div className="text-lg font-semibold text-gray-900">
-                  {user?.name}
-                </div>
-                <div className="text-sm text-gray-600">{user?.email}</div>
-                <div className="mt-2">
-                  <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">
-                    {userType &&
-                      UserTypeLabels[userType as keyof typeof UserTypeLabels]}
-                  </span>
-                </div>
+      {/* User Info Card */}
+      <Row gutter={[16, 16]} className="mb-8">
+        <Col xs={24} sm={12} lg={6}>
+          <Card>
+            <div className="text-center">
+              <UserOutlined className="text-4xl text-blue-600 mb-2" />
+              <div className="text-lg font-semibold text-gray-900">
+                {user?.name}
               </div>
-            </Card>
-          </Col>
-        </Row>
-
-        {/* Quotes Stats */}
-        <Row gutter={[16, 16]} className="mb-8">
-          <Col xs={24} sm={12} lg={6}>
-            <Card>
-              <Statistic
-                title="Total Cotizaciones"
-                value={stats.totalQuotes}
-                prefix={<FileTextOutlined />}
-              />
-            </Card>
-          </Col>
-          <Col xs={24} sm={12} lg={6}>
-            <Card>
-              <Statistic
-                title="En Proceso"
-                value={stats.inProgressQuotes}
-                prefix={<ClockCircleOutlined />}
-                valueStyle={{ color: "#1890ff" }}
-              />
-            </Card>
-          </Col>
-          <Col xs={24} sm={12} lg={6}>
-            <Card>
-              <Statistic
-                title="Finalizadas"
-                value={stats.completedQuotes}
-                prefix={<CheckCircleOutlined />}
-                valueStyle={{ color: "#3f8600" }}
-              />
-            </Card>
-          </Col>
-          <Col xs={24} sm={12} lg={6}>
-            <Card>
-              <Statistic
-                title="Canceladas"
-                value={stats.cancelledQuotes}
-                prefix={<CloseCircleOutlined />}
-                valueStyle={{ color: "#cf1322" }}
-              />
-            </Card>
-          </Col>
-        </Row>
-
-        {/* Clients and Employees Stats */}
-        <Row gutter={[16, 16]} className="mb-8">
-          <Col xs={24} sm={12}>
-            <Card title="Clientes">
-              <Row gutter={[16, 16]}>
-                <Col span={8}>
-                  <Statistic
-                    title="Total"
-                    value={stats.totalClients}
-                    prefix={<UserOutlined />}
-                  />
-                </Col>
-                <Col span={8}>
-                  <Statistic
-                    title="Activos"
-                    value={stats.activeClients}
-                    valueStyle={{ color: "#3f8600" }}
-                  />
-                </Col>
-                <Col span={8}>
-                  <Statistic
-                    title="Inactivos"
-                    value={stats.inactiveClients}
-                    valueStyle={{ color: "#cf1322" }}
-                  />
-                </Col>
-              </Row>
-            </Card>
-          </Col>
-          <Col xs={24} sm={12}>
-            <Card title="Empleados">
-              <Row gutter={[16, 16]}>
-                <Col span={8}>
-                  <Statistic
-                    title="Total"
-                    value={stats.totalEmployees}
-                    prefix={<TeamOutlined />}
-                  />
-                </Col>
-                <Col span={8}>
-                  <Statistic
-                    title="Activos"
-                    value={stats.activeEmployees}
-                    valueStyle={{ color: "#3f8600" }}
-                  />
-                </Col>
-                <Col span={8}>
-                  <Statistic
-                    title="Inactivos"
-                    value={stats.inactiveEmployees}
-                    valueStyle={{ color: "#cf1322" }}
-                  />
-                </Col>
-              </Row>
-            </Card>
-          </Col>
-        </Row>
-
-        {/* Assignments and Tasks Stats */}
-        <Row gutter={[16, 16]} className="mb-8">
-          <Col xs={24} sm={12}>
-            <Card>
-              <Statistic
-                title="Total Asignaciones"
-                value={stats.totalAssignments}
-                prefix={<ProjectOutlined />}
-              />
-            </Card>
-          </Col>
-          <Col xs={24} sm={12}>
-            <Card>
-              <Statistic
-                title="Total Tareas"
-                value={stats.totalTasks}
-                prefix={<CheckCircleOutlined />}
-              />
-            </Card>
-          </Col>
-        </Row>
-
-        {/* Quick Actions */}
-        <Row gutter={[16, 16]}>
-          <Col xs={24}>
-            <Card title="Acciones Rápidas" className="h-full">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                <Button block onClick={() => navigate("/dashboard/quotes")}>
-                  Ver Cotizaciones
-                </Button>
-                <Button block onClick={() => navigate("/dashboard/clients")}>
-                  Ver Clientes
-                </Button>
-                <Button block onClick={() => navigate("/dashboard/employees")}>
-                  Ver Empleados
-                </Button>
+              <div className="text-sm text-gray-600">{user?.email}</div>
+              <div className="mt-2">
+                <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">
+                  {userType &&
+                    UserTypeLabels[userType as keyof typeof UserTypeLabels]}
+                </span>
               </div>
-            </Card>
-          </Col>
-        </Row>
-      </div>
+            </div>
+          </Card>
+        </Col>
+      </Row>
+
+      {/* Quotes Stats */}
+      <Row gutter={[16, 16]} className="mb-8">
+        <Col xs={24} sm={12} lg={6}>
+          <Card>
+            <Statistic
+              title="Total Cotizaciones"
+              value={stats.totalQuotes}
+              prefix={<FileTextOutlined />}
+            />
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} lg={6}>
+          <Card>
+            <Statistic
+              title="En Proceso"
+              value={stats.inProgressQuotes}
+              prefix={<ClockCircleOutlined />}
+              valueStyle={{ color: "#1890ff" }}
+            />
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} lg={6}>
+          <Card>
+            <Statistic
+              title="Finalizadas"
+              value={stats.completedQuotes}
+              prefix={<CheckCircleOutlined />}
+              valueStyle={{ color: "#3f8600" }}
+            />
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} lg={6}>
+          <Card>
+            <Statistic
+              title="Canceladas"
+              value={stats.cancelledQuotes}
+              prefix={<CloseCircleOutlined />}
+              valueStyle={{ color: "#cf1322" }}
+            />
+          </Card>
+        </Col>
+      </Row>
+
+      {/* Clients and Employees Stats */}
+      <Row gutter={[16, 16]} className="mb-8">
+        <Col xs={24} sm={12}>
+          <Card title="Clientes">
+            <Row gutter={[16, 16]}>
+              <Col span={8}>
+                <Statistic
+                  title="Total"
+                  value={stats.totalClients}
+                  prefix={<UserOutlined />}
+                />
+              </Col>
+              <Col span={8}>
+                <Statistic
+                  title="Activos"
+                  value={stats.activeClients}
+                  valueStyle={{ color: "#3f8600" }}
+                />
+              </Col>
+              <Col span={8}>
+                <Statistic
+                  title="Inactivos"
+                  value={stats.inactiveClients}
+                  valueStyle={{ color: "#cf1322" }}
+                />
+              </Col>
+            </Row>
+          </Card>
+        </Col>
+        <Col xs={24} sm={12}>
+          <Card title="Empleados">
+            <Row gutter={[16, 16]}>
+              <Col span={8}>
+                <Statistic
+                  title="Total"
+                  value={stats.totalEmployees}
+                  prefix={<TeamOutlined />}
+                />
+              </Col>
+              <Col span={8}>
+                <Statistic
+                  title="Activos"
+                  value={stats.activeEmployees}
+                  valueStyle={{ color: "#3f8600" }}
+                />
+              </Col>
+              <Col span={8}>
+                <Statistic
+                  title="Inactivos"
+                  value={stats.inactiveEmployees}
+                  valueStyle={{ color: "#cf1322" }}
+                />
+              </Col>
+            </Row>
+          </Card>
+        </Col>
+      </Row>
+
+      {/* Assignments and Tasks Stats */}
+      <Row gutter={[16, 16]} className="mb-8">
+        <Col xs={24} sm={12}>
+          <Card>
+            <Statistic
+              title="Total Asignaciones"
+              value={stats.totalAssignments}
+              prefix={<ProjectOutlined />}
+            />
+          </Card>
+        </Col>
+        <Col xs={24} sm={12}>
+          <Card>
+            <Statistic
+              title="Total Tareas"
+              value={stats.totalTasks}
+              prefix={<CheckCircleOutlined />}
+            />
+          </Card>
+        </Col>
+      </Row>
+
+      {/* Quick Actions */}
+      <Row gutter={[16, 16]}>
+        <Col xs={24}>
+          <Card title="Acciones Rápidas" className="h-full">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <Button block onClick={() => navigate("/dashboard/quotes")}>
+                Ver Cotizaciones
+              </Button>
+              <Button block onClick={() => navigate("/dashboard/clients")}>
+                Ver Clientes
+              </Button>
+              <Button block onClick={() => navigate("/dashboard/employees")}>
+                Ver Empleados
+              </Button>
+            </div>
+          </Card>
+        </Col>
+      </Row>
     </div>
   );
 };
