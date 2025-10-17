@@ -10,13 +10,7 @@ import {
   Descriptions,
   Divider,
 } from "antd";
-import {
-  EyeOutlined,
-  CheckOutlined,
-  CloseOutlined,
-  DollarOutlined,
-} from "@ant-design/icons";
-import Header from "../../components/Header/Header";
+import { EyeOutlined, CheckOutlined, CloseOutlined } from "@ant-design/icons";
 import { useAuth } from "../../hooks/use-auth";
 import dayjs from "dayjs";
 
