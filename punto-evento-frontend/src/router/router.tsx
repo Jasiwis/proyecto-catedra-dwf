@@ -5,7 +5,7 @@ import { ProtectedRoute } from "../components/routes/protected-route";
 import Login from "../pages/auth/login";
 import Home from "../pages/home/home";
 import Register from "../pages/auth/register";
-import UsersManagement from "../pages/admin/UsersManagement";
+import UsersManagement from "../pages/admin/AdminUsersManagement";
 import RoleProtectedRoute from "../components/routes/role-protected-route";
 import { UserType } from "../enums/user-type.enum";
 
