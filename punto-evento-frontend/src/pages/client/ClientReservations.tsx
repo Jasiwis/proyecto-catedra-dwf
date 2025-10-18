@@ -69,17 +69,10 @@ const ClientReservations: React.FC = () => {
   };
 
   const handleCancelReservation = async (reservationId: string) => {
-    console.log("🔴 Cliente intentando cancelar reservación:", reservationId);
-
-    // Primero probemos sin el modal para ver si el problema está ahí
     try {
       setLoading(true);
-      console.log(
-        "📡 Cliente llamando al backend para cancelar reservación..."
-      );
 
       const response = await reservationsApi.cancelReservation(reservationId);
-      console.log("📡 Respuesta del backend:", response);
 
       if (response.success) {
         message.success("Reservación cancelada exitosamente");
@@ -100,7 +93,6 @@ const ClientReservations: React.FC = () => {
         message.error(response.message || "Error al cancelar la reservación");
       }
     } catch (error) {
-      console.error("❌ Error al cancelar reservación:", error);
       let errorMessage = "Error al cancelar la reservación";
       if (error && typeof error === "object" && "response" in error) {
         const axiosError = error as {
@@ -365,7 +357,6 @@ const ClientReservations: React.FC = () => {
                     onClick={(e) => {
                       e.preventDefault();
                       e.stopPropagation();
-                      console.log("🔴 Botón cancelar clickeado en Cliente");
                       handleCancelReservation(selectedReservation!.id);
                     }}
                   >
