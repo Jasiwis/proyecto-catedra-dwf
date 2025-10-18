@@ -1,6 +1,7 @@
 package sv.udb.puntoeventoapi.modules.task.dto;
 
 import jakarta.validation.constraints.*;
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 public record TaskDto(
@@ -14,6 +15,16 @@ public record TaskDto(
         @Size(max = 500, message = "La descripción no debe exceder los 500 caracteres.")
         String description,
 
-        UUID serviceId
+        UUID serviceId,
+
+        // Empleado asignado
+        UUID employeeId,
+
+        // Fechas de inicio y fin
+        @NotNull(message = "La fecha de inicio es obligatoria.")
+        LocalDateTime startDatetime,
+
+        @NotNull(message = "La fecha de fin es obligatoria.")
+        LocalDateTime endDatetime
 ) {
 }

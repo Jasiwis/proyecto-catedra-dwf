@@ -2,7 +2,7 @@ package sv.udb.puntoeventoapi.modules.commons.enums;
 
 public enum TaskStatus {
     PENDIENTE,
-    EN_PROGRESO,
+    EN_PROCESO,
     COMPLETADA,
     CANCELADA
 }

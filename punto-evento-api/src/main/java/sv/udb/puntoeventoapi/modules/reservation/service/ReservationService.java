@@ -6,10 +6,17 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import sv.udb.puntoeventoapi.modules.reservation.dto.ReservationDto;
 import sv.udb.puntoeventoapi.modules.reservation.dto.ReservationResponse;
+import sv.udb.puntoeventoapi.modules.reservation.dto.ReservationDetailResponse;
 import sv.udb.puntoeventoapi.modules.reservation.entity.Reservation;
 import sv.udb.puntoeventoapi.modules.reservation.repository.ReservationRepository;
 import sv.udb.puntoeventoapi.modules.quote.entity.Quote;
+import sv.udb.puntoeventoapi.modules.quote.entity.QuoteItem;
 import sv.udb.puntoeventoapi.modules.quote.repository.QuoteRepository;
+import sv.udb.puntoeventoapi.modules.task.repository.TaskRepository;
+import sv.udb.puntoeventoapi.modules.task.entity.Task;
+import sv.udb.puntoeventoapi.modules.task.dto.TaskResponse;
+import sv.udb.puntoeventoapi.modules.request.entity.Request;
+import sv.udb.puntoeventoapi.modules.client.entity.Client;
 import sv.udb.puntoeventoapi.modules.commons.enums.ReservationStatus;
 import sv.udb.puntoeventoapi.modules.commons.common.ApiResponse;
 
@@ -29,6 +36,7 @@ public class ReservationService {
     
     private final ReservationRepository reservationRepository;
     private final QuoteRepository quoteRepository;
+    private final TaskRepository taskRepository;
     
     public ApiResponse<ReservationResponse> createReservation(ReservationDto reservationDto, UUID createdBy) {
         try {
@@ -73,11 +81,11 @@ public class ReservationService {
     }
     
     @Transactional(readOnly = true)
-    public ApiResponse<List<ReservationResponse>> getAllReservations() {
+    public ApiResponse<List<ReservationDetailResponse>> getAllReservations() {
         try {
             List<Reservation> reservations = reservationRepository.findAll();
-            List<ReservationResponse> responses = reservations.stream()
-                    .map(this::toResponse)
+            List<ReservationDetailResponse> responses = reservations.stream()
+                    .map(this::toDetailResponse)
                     .collect(Collectors.toList());
             
             return ApiResponse.success(responses, "Reservas obtenidas exitosamente");
@@ -88,11 +96,11 @@ public class ReservationService {
     }
     
     @Transactional(readOnly = true)
-    public ApiResponse<List<ReservationResponse>> getReservationsByClient(UUID clientId) {
+    public ApiResponse<List<ReservationDetailResponse>> getReservationsByClient(UUID clientId) {
         try {
             List<Reservation> reservations = reservationRepository.findByClientId(clientId);
-            List<ReservationResponse> responses = reservations.stream()
-                    .map(this::toResponse)
+            List<ReservationDetailResponse> responses = reservations.stream()
+                    .map(this::toDetailResponse)
                     .collect(Collectors.toList());
             
             return ApiResponse.success(responses, "Reservas obtenidas exitosamente");
@@ -103,7 +111,7 @@ public class ReservationService {
     }
 
     @Transactional(readOnly = true)
-    public ApiResponse<List<ReservationResponse>> getReservationsByClientFiltered(
+    public ApiResponse<List<ReservationDetailResponse>> getReservationsByClientFiltered(
             UUID clientId,
             Optional<String> q,
             Optional<ReservationStatus> status,
@@ -117,7 +125,7 @@ public class ReservationService {
             LocalDate from = dateFrom.map(LocalDate::parse).orElse(null);
             LocalDate to = dateTo.map(LocalDate::parse).orElse(null);
 
-            List<ReservationResponse> responses = reservations.stream()
+            List<ReservationDetailResponse> responses = reservations.stream()
                     .filter(r -> status.map(s -> r.getStatus() == s).orElse(true))
                     .filter(r -> {
                         if (from == null && to == null) return true;
@@ -141,7 +149,7 @@ public class ReservationService {
                                 || (r.getLocation() != null && r.getLocation().toLowerCase().contains(t))
                                 || (r.getNotes() != null && r.getNotes().toLowerCase().contains(t));
                     }).orElse(true))
-                    .map(this::toResponse)
+                    .map(this::toDetailResponse)
                     .collect(Collectors.toList());
 
             log.info("Reservas filtradas: {}", responses.size());
@@ -153,12 +161,12 @@ public class ReservationService {
     }
     
     @Transactional(readOnly = true)
-    public ApiResponse<ReservationResponse> getReservationById(UUID id) {
+    public ApiResponse<ReservationDetailResponse> getReservationById(UUID id) {
         try {
             Reservation reservation = reservationRepository.findById(id)
                     .orElseThrow(() -> new RuntimeException("Reserva no encontrada"));
             
-            return ApiResponse.success(toResponse(reservation), "Reserva obtenida exitosamente");
+            return ApiResponse.success(toDetailResponse(reservation), "Reserva obtenida exitosamente");
         } catch (Exception e) {
             log.error("Error al obtener reserva: {}", e.getMessage());
             return ApiResponse.error("Error al obtener reserva: " + e.getMessage());
@@ -206,7 +214,43 @@ public class ReservationService {
         }
     }
     
+    public ApiResponse<ReservationDetailResponse> publishReservation(UUID id) {
+        try {
+            Reservation reservation = reservationRepository.findById(id)
+                    .orElseThrow(() -> new RuntimeException("Reserva no encontrada"));
+            
+            // Validar que la reservación esté en EN_PLANEACION
+            if (reservation.getStatus() != ReservationStatus.EN_PLANEACION) {
+                return ApiResponse.error("La reservación debe estar en estado EN_PLANEACION para ser publicada");
+            }
+            
+            // Validar que tenga al menos una tarea
+            List<Task> tasks = taskRepository.findByReservationId(id);
+            if (tasks.isEmpty()) {
+                return ApiResponse.error("La reservación debe tener al menos una tarea antes de ser publicada");
+            }
+            
+            // Cambiar el estado a PROGRAMADA
+            reservation.setStatus(ReservationStatus.PROGRAMADA);
+            reservation.setUpdatedAt(LocalDateTime.now());
+            
+            Reservation savedReservation = reservationRepository.save(reservation);
+            log.info("Reservación publicada: {} -> PROGRAMADA", id);
+            
+            return ApiResponse.success(toDetailResponse(savedReservation), "Reservación publicada exitosamente");
+        } catch (Exception e) {
+            log.error("Error al publicar reservación: {}", e.getMessage());
+            return ApiResponse.error("Error al publicar reservación: " + e.getMessage());
+        }
+    }
+    
     private ReservationResponse toResponse(Reservation reservation) {
+        // Cargar las tareas de esta reservación
+        List<Task> tasks = taskRepository.findByReservationId(reservation.getId());
+        List<TaskResponse> taskResponses = tasks.stream()
+                .map(this::taskToResponse)
+                .collect(Collectors.toList());
+        
         return ReservationResponse.builder()
                 .id(reservation.getId())
                 .quote(reservation.getQuote())
@@ -220,6 +264,127 @@ public class ReservationService {
                 .createdBy(reservation.getCreatedBy())
                 .createdAt(reservation.getCreatedAt())
                 .updatedAt(reservation.getUpdatedAt())
+                .tasks(taskResponses)
+                .build();
+    }
+    
+    private TaskResponse taskToResponse(Task task) {
+        // Obtener empleados asignados a esta tarea
+        var assignments = task.getAssignments();
+        String employeeNames = assignments != null && !assignments.isEmpty()
+                ? assignments.stream()
+                    .map(a -> a.getEmployee().getName())
+                    .collect(Collectors.joining(", "))
+                : "Sin asignar";
+        
+        UUID firstEmployeeId = assignments != null && !assignments.isEmpty()
+                ? assignments.get(0).getEmployee().getId()
+                : null;
+
+        return TaskResponse.builder()
+                .id(task.getId())
+                .reservationId(task.getReservation().getId())
+                .employeeId(firstEmployeeId)
+                .employeeName(employeeNames)
+                .serviceId(task.getServiceId())
+                .title(task.getTitle())
+                .description(task.getDescription())
+                .status(task.getStatus())
+                .startDatetime(task.getStartDatetime())
+                .endDatetime(task.getEndDatetime())
+                .completedAt(task.getCompletedAt())
+                .createdAt(task.getCreatedAt())
+                .updatedAt(task.getUpdatedAt())
+                .build();
+    }
+    
+    private ReservationDetailResponse toDetailResponse(Reservation reservation) {
+        // Información del cliente
+        Client client = reservation.getClient();
+        ReservationDetailResponse.ClientInfo clientInfo = ReservationDetailResponse.ClientInfo.builder()
+                .id(client.getId())
+                .name(client.getName())
+                .email(client.getEmail())
+                .phone(client.getPhone())
+                .build();
+        
+        // Información de la cotización
+        Quote quote = reservation.getQuote();
+        ReservationDetailResponse.QuoteInfo quoteInfo = ReservationDetailResponse.QuoteInfo.builder()
+                .id(quote.getId())
+                .eventName(quote.getEventName())
+                .estimatedHours(quote.getEstimatedHours())
+                .subtotal(quote.getSubtotal())
+                .taxTotal(quote.getTaxTotal())
+                .additionalCosts(quote.getAdditionalCosts())
+                .total(quote.getTotal())
+                .status(quote.getStatus().name())
+                .build();
+        
+        // Información de la solicitud (request)
+        ReservationDetailResponse.RequestInfo requestInfo = null;
+        Request request = quote.getRequest();
+        if (request != null) {
+            requestInfo = ReservationDetailResponse.RequestInfo.builder()
+                    .id(request.getId())
+                    .eventName(request.getEventName())
+                    .eventDate(request.getEventDate())
+                    .location(request.getLocation())
+                    .requestedServices(request.getRequestedServices())
+                    .notes(request.getNotes())
+                    .build();
+        }
+        
+        // Servicios de la cotización
+        List<ReservationDetailResponse.ServiceInfo> services = quote.getItems().stream()
+                .map(item -> ReservationDetailResponse.ServiceInfo.builder()
+                        .id(item.getId())
+                        .description(item.getDescription())
+                        .quantity(item.getQuantity())
+                        .unitPrice(item.getUnitPrice())
+                        .total(item.getTotal())
+                        .build())
+                .collect(Collectors.toList());
+        
+        // Tareas de la reservación
+        List<Task> tasks = taskRepository.findByReservationId(reservation.getId());
+        List<ReservationDetailResponse.TaskInfo> taskInfos = tasks.stream()
+                .map(task -> {
+                    var assignments = task.getAssignments();
+                    String employeeNames = assignments != null && !assignments.isEmpty()
+                            ? assignments.stream()
+                                .map(a -> a.getEmployee().getName())
+                                .collect(Collectors.joining(", "))
+                            : "Sin asignar";
+                    
+                    return ReservationDetailResponse.TaskInfo.builder()
+                            .id(task.getId())
+                            .title(task.getTitle())
+                            .description(task.getDescription())
+                            .status(task.getStatus().name())
+                            .employeeName(employeeNames)
+                            .startDatetime(task.getStartDatetime())
+                            .endDatetime(task.getEndDatetime())
+                            .completedAt(task.getCompletedAt())
+                            .build();
+                })
+                .collect(Collectors.toList());
+        
+        return ReservationDetailResponse.builder()
+                .id(reservation.getId())
+                .eventName(reservation.getEventName())
+                .scheduledFor(reservation.getScheduledFor())
+                .location(reservation.getLocation())
+                .status(reservation.getStatus())
+                .progressPercentage(reservation.getProgressPercentage())
+                .notes(reservation.getNotes())
+                .createdAt(reservation.getCreatedAt())
+                .updatedAt(reservation.getUpdatedAt())
+                .client(clientInfo)
+                .quote(quoteInfo)
+                .request(requestInfo)
+                .services(services)
+                .tasks(taskInfos)
                 .build();
     }
 }

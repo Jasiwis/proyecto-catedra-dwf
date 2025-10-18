@@ -7,6 +7,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
@@ -17,6 +18,7 @@ import sv.udb.puntoeventoapi.config.security.UserDetailsServiceImpl;
 import sv.udb.puntoeventoapi.modules.user.entity.User;
 
 import java.io.IOException;
+import java.util.Collections;
 import java.util.List;
 
 @Component
@@ -60,8 +62,18 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 String userId = jwtUtil.extractUserId(token);
                 User user = userDetailsService.getById(userId);
 
+                // Validar que el usuario esté activo
+                if (!user.getActive()) {
+                    throw new InvalidJwtException("Usuario inactivo");
+                }
+
+                // Crear la autoridad con el rol del usuario (ROLE_ADMIN, ROLE_EMPLOYEE, ROLE_CLIENT)
+                SimpleGrantedAuthority authority = new SimpleGrantedAuthority("ROLE_" + user.getUserType().name());
+                
                 var auth = new UsernamePasswordAuthenticationToken(
-                        user, null, null
+                        user, 
+                        null, 
+                        Collections.singletonList(authority)
                 );
                 auth.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
                 SecurityContextHolder.getContext().setAuthentication(auth);

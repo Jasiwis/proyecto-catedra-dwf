@@ -12,34 +12,26 @@ import {
   Input,
   Select,
   DatePicker,
+  Divider,
 } from "antd";
 import { EyeOutlined, SearchOutlined, ReloadOutlined } from "@ant-design/icons";
 import dayjs from "dayjs";
 import { reservationsApi } from "../../api/reservations";
-
-interface ReservationData {
-  id: string;
-  quoteId?: string;
-  eventName: string;
-  scheduledFor: string;
-  location: string;
-  status: string;
-  progressPercentage: number;
-  createdAt: string;
-  quoteTotal?: number;
-}
+import type { ReservationDetail } from "../../api/reservations";
 
 const ClientReservations: React.FC = () => {
   const [loading, setLoading] = useState(false);
-  const [reservations, setReservations] = useState<ReservationData[]>([]);
+  const [reservations, setReservations] = useState<ReservationDetail[]>([]);
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedReservation, setSelectedReservation] =
-    useState<ReservationData | null>(null);
+    useState<ReservationDetail | null>(null);
   const [searchText, setSearchText] = useState("");
   const [statusFilter, setStatusFilter] = useState<string | undefined>(
     undefined
   );
-  const [dateRange, setDateRange] = useState<any[]>([]);
+  const [dateRange, setDateRange] = useState<[dayjs.Dayjs, dayjs.Dayjs] | null>(
+    null
+  );
 
   useEffect(() => {
     fetchReservations();
@@ -53,32 +45,20 @@ const ClientReservations: React.FC = () => {
         q: searchText || undefined,
         status: statusFilter,
         dateFrom: dateRange?.[0]
-          ? dayjs(dateRange[0]).format("YYYY-MM-DD")
+          ? dateRange[0].format("YYYY-MM-DD")
           : undefined,
-        dateTo: dateRange?.[1]
-          ? dayjs(dateRange[1]).format("YYYY-MM-DD")
-          : undefined,
+        dateTo: dateRange?.[1] ? dateRange[1].format("YYYY-MM-DD") : undefined,
       });
-      const data = (response?.data || []).map((r: any) => ({
-        id: r.id,
-        quoteId: r.quote?.id,
-        eventName: r.eventName || "Sin nombre",
-        scheduledFor: r.scheduledFor,
-        location: r.location,
-        status: String(r.status).toUpperCase(),
-        progressPercentage: Number(r.progressPercentage || 0),
-        createdAt: r.createdAt,
-        quoteTotal: r.quote?.total,
-      }));
-      setReservations(data);
+      setReservations(response?.data || []);
     } catch (error) {
       message.error("Error al cargar las reservas");
+      console.error(error);
     } finally {
       setLoading(false);
     }
   };
 
-  const showReservationDetails = (reservation: ReservationData) => {
+  const showReservationDetails = (reservation: ReservationDetail) => {
     setSelectedReservation(reservation);
     setModalVisible(true);
   };
@@ -127,6 +107,36 @@ const ClientReservations: React.FC = () => {
     }
   };
 
+  const getTaskStatusColor = (status: string) => {
+    switch (status) {
+      case "PENDIENTE":
+        return "orange";
+      case "EN_PROCESO":
+        return "blue";
+      case "COMPLETADA":
+        return "green";
+      case "CANCELADA":
+        return "red";
+      default:
+        return "default";
+    }
+  };
+
+  const getTaskStatusLabel = (status: string) => {
+    switch (status) {
+      case "PENDIENTE":
+        return "Pendiente";
+      case "EN_PROCESO":
+        return "En Proceso";
+      case "COMPLETADA":
+        return "Completada";
+      case "CANCELADA":
+        return "Cancelada";
+      default:
+        return status;
+    }
+  };
+
   const columns = [
     {
       title: "Nombre del Evento",
@@ -139,7 +149,7 @@ const ClientReservations: React.FC = () => {
       dataIndex: "scheduledFor",
       key: "scheduledFor",
       render: (date: string) => dayjs(date).format("DD/MM/YYYY HH:mm"),
-      sorter: (a: ReservationData, b: ReservationData) =>
+      sorter: (a: ReservationDetail, b: ReservationDetail) =>
         dayjs(a.scheduledFor).unix() - dayjs(b.scheduledFor).unix(),
     },
     {
@@ -152,12 +162,6 @@ const ClientReservations: React.FC = () => {
       title: "Estado",
       dataIndex: "status",
       key: "status",
-      filters: [
-        { text: "Activo", value: "ACTIVO" },
-        { text: "Inactivo", value: "INACTIVO" },
-      ],
-      onFilter: (value: string, record: ReservationData) =>
-        String(record.status).toUpperCase() === String(value).toUpperCase(),
       render: (status: string) => (
         <Tag color={getStatusColor(status)}>{getStatusLabel(status)}</Tag>
       ),
@@ -169,27 +173,41 @@ const ClientReservations: React.FC = () => {
       render: (p: number) => (
         <div className="w-24">
           <Progress
-            percent={p}
+            percent={Number(p || 0)}
             size="small"
-            status={p === 100 ? "success" : "active"}
+            status={Number(p || 0) === 100 ? "success" : "active"}
           />
         </div>
       ),
-      sorter: (a: ReservationData, b: ReservationData) =>
-        a.progressPercentage - b.progressPercentage,
+      sorter: (a: ReservationDetail, b: ReservationDetail) =>
+        Number(a.progressPercentage || 0) - Number(b.progressPercentage || 0),
+    },
+    {
+      title: "Tareas",
+      key: "tasks",
+      render: (_: unknown, record: ReservationDetail) => {
+        const completedTasks =
+          record.tasks?.filter((t) => t.status === "COMPLETADA").length || 0;
+        const totalTasks = record.tasks?.length || 0;
+        return (
+          <span>
+            {completedTasks} / {totalTasks}
+          </span>
+        );
+      },
     },
     {
       title: "Creada",
       dataIndex: "createdAt",
       key: "createdAt",
       render: (date: string) => dayjs(date).format("DD/MM/YYYY HH:mm"),
-      sorter: (a: ReservationData, b: ReservationData) =>
+      sorter: (a: ReservationDetail, b: ReservationDetail) =>
         dayjs(a.createdAt).unix() - dayjs(b.createdAt).unix(),
     },
     {
       title: "Acciones",
       key: "actions",
-      render: (_: unknown, record: ReservationData) => (
+      render: (_: unknown, record: ReservationDetail) => (
         <Space>
           <Button
             type="link"
@@ -239,8 +257,10 @@ const ClientReservations: React.FC = () => {
                 style={{ width: 160 }}
               />
               <DatePicker.RangePicker
-                value={dateRange as any}
-                onChange={(val) => setDateRange(val as any)}
+                value={dateRange}
+                onChange={(val) =>
+                  setDateRange(val as [dayjs.Dayjs, dayjs.Dayjs] | null)
+                }
               />
               <Button onClick={fetchReservations} type="primary">
                 Buscar
@@ -250,7 +270,7 @@ const ClientReservations: React.FC = () => {
                 onClick={() => {
                   setSearchText("");
                   setStatusFilter(undefined);
-                  setDateRange([]);
+                  setDateRange(null);
                   fetchReservations();
                 }}
               />
@@ -277,6 +297,7 @@ const ClientReservations: React.FC = () => {
           title="Detalles de la Reserva"
           open={modalVisible}
           onCancel={() => setModalVisible(false)}
+          width={900}
           footer={[
             <Button key="close" onClick={() => setModalVisible(false)}>
               Cerrar
@@ -284,7 +305,8 @@ const ClientReservations: React.FC = () => {
           ]}
         >
           {selectedReservation && (
-            <div className="space-y-4">
+            <div className="space-y-6">
+              {/* Información de la Reserva */}
               <Descriptions
                 bordered
                 column={2}
@@ -311,24 +333,200 @@ const ClientReservations: React.FC = () => {
                     "DD/MM/YYYY HH:mm"
                   )}
                 </Descriptions.Item>
-                {selectedReservation.quoteTotal && (
-                  <Descriptions.Item label="Total Cotizado">
-                    <span className="font-semibold text-green-600">
-                      ${Number(selectedReservation.quoteTotal).toFixed(2)}
-                    </span>
+                {selectedReservation.notes && (
+                  <Descriptions.Item label="Notas" span={2}>
+                    {selectedReservation.notes}
                   </Descriptions.Item>
                 )}
                 <Descriptions.Item label="Progreso" span={2}>
                   <Progress
-                    percent={selectedReservation.progressPercentage}
+                    percent={Number(
+                      selectedReservation.progressPercentage || 0
+                    )}
                     status={
-                      selectedReservation.progressPercentage === 100
+                      Number(selectedReservation.progressPercentage || 0) ===
+                      100
                         ? "success"
                         : "active"
                     }
                   />
                 </Descriptions.Item>
               </Descriptions>
+
+              <Divider />
+
+              {/* Información de la Cotización */}
+              {selectedReservation.quote && (
+                <>
+                  <Descriptions
+                    bordered
+                    column={2}
+                    title="Información de la Cotización"
+                  >
+                    <Descriptions.Item label="Nombre del Servicio" span={2}>
+                      {selectedReservation.quote.eventName}
+                    </Descriptions.Item>
+                    {selectedReservation.quote.estimatedHours && (
+                      <Descriptions.Item label="Horas Estimadas">
+                        {selectedReservation.quote.estimatedHours}
+                      </Descriptions.Item>
+                    )}
+                    <Descriptions.Item label="Estado de Cotización">
+                      <Tag color="green">
+                        {selectedReservation.quote.status}
+                      </Tag>
+                    </Descriptions.Item>
+                    <Descriptions.Item label="Subtotal">
+                      $
+                      {Number(selectedReservation.quote.subtotal || 0).toFixed(
+                        2
+                      )}
+                    </Descriptions.Item>
+                    <Descriptions.Item label="Impuestos">
+                      $
+                      {Number(selectedReservation.quote.taxTotal || 0).toFixed(
+                        2
+                      )}
+                    </Descriptions.Item>
+                    <Descriptions.Item label="Costos Adicionales">
+                      $
+                      {Number(
+                        selectedReservation.quote.additionalCosts || 0
+                      ).toFixed(2)}
+                    </Descriptions.Item>
+                    <Descriptions.Item label="Total">
+                      <span className="font-semibold text-green-600 text-lg">
+                        $
+                        {Number(selectedReservation.quote.total || 0).toFixed(
+                          2
+                        )}
+                      </span>
+                    </Descriptions.Item>
+                  </Descriptions>
+
+                  {/* Servicios de la Cotización */}
+                  {selectedReservation.services &&
+                    selectedReservation.services.length > 0 && (
+                      <>
+                        <Divider />
+                        <div>
+                          <h4 className="text-lg font-semibold mb-3">
+                            Servicios Incluidos
+                          </h4>
+                          <Table
+                            dataSource={selectedReservation.services}
+                            rowKey="id"
+                            pagination={false}
+                            size="small"
+                            columns={[
+                              {
+                                title: "Descripción",
+                                dataIndex: "description",
+                                key: "description",
+                              },
+                              {
+                                title: "Cantidad",
+                                dataIndex: "quantity",
+                                key: "quantity",
+                              },
+                              {
+                                title: "Precio Unitario",
+                                dataIndex: "unitPrice",
+                                key: "unitPrice",
+                                render: (price: number) =>
+                                  `$${Number(price || 0).toFixed(2)}`,
+                              },
+                              {
+                                title: "Total",
+                                dataIndex: "total",
+                                key: "total",
+                                render: (total: number) => (
+                                  <span className="font-semibold">
+                                    ${Number(total || 0).toFixed(2)}
+                                  </span>
+                                ),
+                              },
+                            ]}
+                          />
+                        </div>
+                      </>
+                    )}
+                </>
+              )}
+
+              <Divider />
+
+              {/* Tareas del Evento - Solo visible si NO está en EN_PLANEACION */}
+              {String(selectedReservation.status).toUpperCase() !==
+                "EN_PLANEACION" &&
+              String(selectedReservation.status).toUpperCase() !==
+                "ENPLANEACION" ? (
+                <div>
+                  <h4 className="text-lg font-semibold mb-3">
+                    Tareas del Evento ({selectedReservation.tasks?.length || 0})
+                  </h4>
+                  {selectedReservation.tasks &&
+                  selectedReservation.tasks.length > 0 ? (
+                    <Table
+                      dataSource={selectedReservation.tasks}
+                      rowKey="id"
+                      pagination={false}
+                      size="small"
+                      columns={[
+                        {
+                          title: "Tarea",
+                          dataIndex: "title",
+                          key: "title",
+                        },
+                        {
+                          title: "Asignada a",
+                          dataIndex: "employeeName",
+                          key: "employeeName",
+                          render: (name: string) => name || "Sin asignar",
+                        },
+                        {
+                          title: "Estado",
+                          dataIndex: "status",
+                          key: "status",
+                          render: (status: string) => (
+                            <Tag color={getTaskStatusColor(status)}>
+                              {getTaskStatusLabel(status)}
+                            </Tag>
+                          ),
+                        },
+                        {
+                          title: "Fecha Inicio",
+                          dataIndex: "startDatetime",
+                          key: "startDatetime",
+                          render: (date: string) =>
+                            date ? dayjs(date).format("DD/MM/YYYY HH:mm") : "-",
+                        },
+                        {
+                          title: "Fecha Fin",
+                          dataIndex: "endDatetime",
+                          key: "endDatetime",
+                          render: (date: string) =>
+                            date ? dayjs(date).format("DD/MM/YYYY HH:mm") : "-",
+                        },
+                      ]}
+                    />
+                  ) : (
+                    <div className="text-center text-gray-500 py-8">
+                      No hay tareas asignadas aún
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="text-center bg-blue-50 p-6 rounded-lg">
+                  <div className="text-blue-600 font-semibold mb-2">
+                    Evento en Planeación
+                  </div>
+                  <div className="text-gray-600">
+                    Este evento está siendo planificado por nuestro equipo. Las
+                    tareas serán visibles una vez que el evento sea publicado.
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </Modal>

@@ -57,6 +57,11 @@ public class AuthService {
             throw new RuntimeException("Credenciales inválidas");
         }
 
+        // Validar que el usuario esté activo
+        if (!user.getActive()) {
+            throw new RuntimeException("Usuario inactivo. Contacte al administrador.");
+        }
+
         String token = jwtUtil.generateToken(user.getId().toString());
 
         return AuthResponse.builder()

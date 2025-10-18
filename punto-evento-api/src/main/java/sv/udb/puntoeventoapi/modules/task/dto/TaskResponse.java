@@ -10,6 +10,10 @@ import java.util.UUID;
 public record TaskResponse(
         UUID id,
         UUID reservationId,
+        String reservationEventName,
+        String reservationLocation,
+        String reservationScheduledFor,
+        String clientName,
         UUID employeeId,
         String employeeName,
         UUID serviceId,

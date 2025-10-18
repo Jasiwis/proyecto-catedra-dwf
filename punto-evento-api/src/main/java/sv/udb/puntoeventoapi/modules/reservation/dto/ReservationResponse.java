@@ -7,9 +7,12 @@ import lombok.AllArgsConstructor;
 import sv.udb.puntoeventoapi.modules.commons.enums.ReservationStatus;
 import sv.udb.puntoeventoapi.modules.client.entity.Client;
 import sv.udb.puntoeventoapi.modules.quote.entity.Quote;
+import sv.udb.puntoeventoapi.modules.task.dto.TaskResponse;
 import java.math.BigDecimal;
 import java.util.UUID;
 import java.time.LocalDateTime;
+import java.util.List;
+import java.util.ArrayList;
 
 @Data
 @Builder
@@ -29,4 +32,7 @@ public class ReservationResponse {
     private UUID createdBy;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+    
+    @Builder.Default
+    private List<TaskResponse> tasks = new ArrayList<>();
 }

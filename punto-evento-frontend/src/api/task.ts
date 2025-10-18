@@ -4,6 +4,10 @@ import axiosClient from "../lib/axios-client";
 export interface Task {
   id: string;
   reservationId: string;
+  reservationEventName?: string;
+  reservationLocation?: string;
+  reservationScheduledFor?: string;
+  clientName?: string;
   employeeId: string;
   employeeName?: string;
   serviceId?: string;
@@ -19,10 +23,12 @@ export interface Task {
 
 export interface CreateTaskRequest {
   reservationId: string;
-  employeeId: string;
+  employeeId?: string; // Opcional ahora
   serviceId?: string;
   title: string;
   description?: string;
+  startDatetime: string; // ISO 8601 format
+  endDatetime: string; // ISO 8601 format
 }
 
 export interface TaskResponse {
@@ -47,6 +53,12 @@ export const tasksApi = {
   // Obtener todas las tareas
   getAllTasks: async (): Promise<TasksListResponse> => {
     const response = await axiosClient.get("/tasks");
+    return response.data;
+  },
+
+  // Obtener mis tareas (del empleado autenticado)
+  getMyTasks: async (): Promise<TasksListResponse> => {
+    const response = await axiosClient.get("/tasks/my-tasks");
     return response.data;
   },
 

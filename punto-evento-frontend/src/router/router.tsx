@@ -5,7 +5,7 @@ import { ProtectedRoute } from "../components/routes/protected-route";
 import Login from "../pages/auth/login";
 import Home from "../pages/home/home";
 import Register from "../pages/auth/register";
-import UsersManagement from "../pages/admin/AdminUsersManagement";
+import UserManagement from "../pages/admin/UserManagement";
 import RoleProtectedRoute from "../components/routes/role-protected-route";
 import { UserType } from "../enums/user-type.enum";
 
@@ -80,7 +80,7 @@ export const router = createBrowserRouter([
         path: "/admin/users",
         element: (
           <RoleProtectedRoute allowedRoles={[UserType.ADMIN]}>
-            <UsersManagement />
+            <UserManagement />
           </RoleProtectedRoute>
         ),
       },

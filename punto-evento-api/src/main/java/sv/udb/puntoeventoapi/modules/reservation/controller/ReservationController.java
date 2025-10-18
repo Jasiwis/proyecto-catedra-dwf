@@ -6,6 +6,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import sv.udb.puntoeventoapi.modules.reservation.dto.ReservationDto;
 import sv.udb.puntoeventoapi.modules.reservation.dto.ReservationResponse;
+import sv.udb.puntoeventoapi.modules.reservation.dto.ReservationDetailResponse;
 import sv.udb.puntoeventoapi.modules.reservation.service.ReservationService;
 import sv.udb.puntoeventoapi.modules.commons.common.ApiResponse;
 import sv.udb.puntoeventoapi.modules.commons.enums.ReservationStatus;
@@ -38,21 +39,21 @@ public class ReservationController {
     }
     
     @GetMapping
-    public ResponseEntity<ApiResponse<List<ReservationResponse>>> getAllReservations() {
-        ApiResponse<List<ReservationResponse>> response = reservationService.getAllReservations();
+    public ResponseEntity<ApiResponse<List<ReservationDetailResponse>>> getAllReservations() {
+        ApiResponse<List<ReservationDetailResponse>> response = reservationService.getAllReservations();
         return ResponseEntity.ok(response);
     }
     
     @GetMapping("/client/{clientId}")
-    public ResponseEntity<ApiResponse<List<ReservationResponse>>> getReservationsByClient(
+    public ResponseEntity<ApiResponse<List<ReservationDetailResponse>>> getReservationsByClient(
             @PathVariable UUID clientId) {
         
-        ApiResponse<List<ReservationResponse>> response = reservationService.getReservationsByClient(clientId);
+        ApiResponse<List<ReservationDetailResponse>> response = reservationService.getReservationsByClient(clientId);
         return ResponseEntity.ok(response);
     }
     
     @GetMapping("/my-reservations")
-    public ResponseEntity<ApiResponse<List<ReservationResponse>>> getMyReservations(
+    public ResponseEntity<ApiResponse<List<ReservationDetailResponse>>> getMyReservations(
             @CurrentUser User currentUser,
             @RequestParam(required = false) String q,
             @RequestParam(required = false) ReservationStatus status,
@@ -60,7 +61,7 @@ public class ReservationController {
             @RequestParam(required = false) String dateTo) {
         
         var client = clientService.getOrCreateByUser(currentUser);
-        ApiResponse<List<ReservationResponse>> response = reservationService.getReservationsByClientFiltered(
+        ApiResponse<List<ReservationDetailResponse>> response = reservationService.getReservationsByClientFiltered(
                 client.getId(),
                 java.util.Optional.ofNullable(q),
                 java.util.Optional.ofNullable(status),
@@ -71,8 +72,8 @@ public class ReservationController {
     }
     
     @GetMapping("/{id}")
-    public ResponseEntity<ApiResponse<ReservationResponse>> getReservationById(@PathVariable UUID id) {
-        ApiResponse<ReservationResponse> response = reservationService.getReservationById(id);
+    public ResponseEntity<ApiResponse<ReservationDetailResponse>> getReservationById(@PathVariable UUID id) {
+        ApiResponse<ReservationDetailResponse> response = reservationService.getReservationById(id);
         
         return ResponseEntity.status(response.isSuccess() ? 200 : 404).body(response);
     }
@@ -93,5 +94,11 @@ public class ReservationController {
         
         ApiResponse<ReservationResponse> response = reservationService.updateReservationStatus(id, status);
         return ResponseEntity.ok(response);
+    }
+    
+    @PostMapping("/{id}/publish")
+    public ResponseEntity<ApiResponse<ReservationDetailResponse>> publishReservation(@PathVariable UUID id) {
+        ApiResponse<ReservationDetailResponse> response = reservationService.publishReservation(id);
+        return ResponseEntity.status(response.isSuccess() ? 200 : 400).body(response);
     }
 }

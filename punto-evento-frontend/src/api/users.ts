@@ -1,28 +1,48 @@
+import type { ApiResponse } from "../interfaces/api.interface";
 import axiosClient from "../lib/axios-client";
-import {
-  CreateUserRequest,
-  UpdateUserRequest,
-  User,
-  UserResponse,
-  UsersListResponse,
-} from "../interfaces/user.interface";
-import { UserType } from "../enums/user-type.enum";
+
+export interface User {
+  id: string;
+  name: string;
+  email: string;
+  userType: "ADMIN" | "EMPLOYEE" | "CLIENT";
+  active: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateUserRequest {
+  name: string;
+  email: string;
+  password: string;
+  userType: "ADMIN" | "EMPLOYEE" | "CLIENT";
+  active?: boolean;
+}
+
+export interface UpdateUserRequest {
+  name?: string;
+  email?: string;
+  password?: string;
+  userType?: "ADMIN" | "EMPLOYEE" | "CLIENT";
+  active?: boolean;
+}
+
+export interface UsersResponse {
+  data: User[];
+  message: string;
+  success: boolean;
+}
+
+export interface UserResponse {
+  data: User;
+  message: string;
+  success: boolean;
+}
 
 export const usersApi = {
-  // Obtener todos los usuarios con paginación
-  getUsers: async (
-    page: number = 0,
-    size: number = 10
-  ): Promise<UsersListResponse> => {
-    const response = await axiosClient.get(`/users?page=${page}&size=${size}`);
-    return response.data;
-  },
-
-  // Obtener usuarios por tipo
-  getUsersByType: async (
-    userType: UserType
-  ): Promise<{ data: User[]; message: string; success: boolean }> => {
-    const response = await axiosClient.get(`/users/type/${userType}`);
+  // Obtener todos los usuarios
+  getAllUsers: async (): Promise<UsersResponse> => {
+    const response = await axiosClient.get("/users");
     return response.data;
   },
 
@@ -32,13 +52,15 @@ export const usersApi = {
     return response.data;
   },
 
-  // Obtener usuario por email
-  getUserByEmail: async (email: string): Promise<UserResponse> => {
-    const response = await axiosClient.get(`/users/email/${email}`);
+  // Obtener usuarios por tipo
+  getUsersByType: async (
+    userType: "ADMIN" | "EMPLOYEE" | "CLIENT"
+  ): Promise<UsersResponse> => {
+    const response = await axiosClient.get(`/users/type/${userType}`);
     return response.data;
   },
 
-  // Crear nuevo usuario
+  // Crear usuario
   createUser: async (userData: CreateUserRequest): Promise<UserResponse> => {
     const response = await axiosClient.post("/users", userData);
     return response.data;
@@ -54,17 +76,13 @@ export const usersApi = {
   },
 
   // Eliminar usuario
-  deleteUser: async (
-    id: string
-  ): Promise<{ data: null; message: string; success: boolean }> => {
+  deleteUser: async (id: string): Promise<ApiResponse<null>> => {
     const response = await axiosClient.delete(`/users/${id}`);
     return response.data;
   },
 
   // Desactivar usuario
-  deactivateUser: async (
-    id: string
-  ): Promise<{ data: null; message: string; success: boolean }> => {
+  deactivateUser: async (id: string): Promise<ApiResponse<null>> => {
     const response = await axiosClient.patch(`/users/${id}/deactivate`);
     return response.data;
   },

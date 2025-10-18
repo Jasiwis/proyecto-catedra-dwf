@@ -56,35 +56,46 @@ const EmployeeTasks: React.FC = () => {
   const fetchTasks = async () => {
     try {
       setLoading(true);
-      if (user?.id) {
-        const response = await tasksApi.getTasksByEmployee(user.id);
+      const response = await tasksApi.getMyTasks();
+
+      if (response.success && response.data) {
         const tasksData = response.data.map((task: Task) => ({
           id: task.id,
           title: task.title,
           description: task.description || "",
-          status: task.status,
-          priority: "MEDIA", // Por ahora fijo, se puede expandir después
+          status: task.status as
+            | "PENDIENTE"
+            | "EN_PROCESO"
+            | "COMPLETADA"
+            | "CANCELADA",
+          priority: "MEDIA" as "BAJA" | "MEDIA" | "ALTA", // Por ahora fijo, se puede expandir después
           assignedDate: task.createdAt,
           dueDate: task.endDatetime || task.createdAt,
           completedAt: task.completedAt,
           reservation: {
             id: task.reservationId,
-            clientName: task.employeeName || "Cliente no disponible",
-            eventDate: task.startDatetime || task.createdAt,
-            location: "Ubicación no disponible",
+            clientName: task.clientName || "Cliente no disponible",
+            eventDate:
+              task.reservationScheduledFor ||
+              task.startDatetime ||
+              task.createdAt,
+            location: task.reservationLocation || "Ubicación no disponible",
           },
           progress:
             task.status === "COMPLETADA"
               ? 100
-              : task.status === "EN_PROGRESO"
+              : task.status === "EN_PROCESO"
               ? 50
               : 0,
         }));
         setTasks(tasksData);
+      } else {
+        setTasks([]);
       }
     } catch (error) {
       const errorMessage = getErrorFromResponse(error);
       message.error(`Error al cargar las tareas: ${errorMessage}`);
+      setTasks([]);
     } finally {
       setLoading(false);
     }
@@ -98,8 +109,10 @@ const EmployeeTasks: React.FC = () => {
   const handleStartTask = async (taskId: string) => {
     try {
       setLoading(true);
-      await tasksApi.updateTaskStatus(taskId, "EN_PROGRESO");
-      message.success("Tarea iniciada");
+      await tasksApi.updateTaskStatus(taskId, "EN_PROCESO");
+      message.success(
+        "Tarea iniciada. La reservación ha sido marcada como EN CURSO automáticamente."
+      );
       fetchTasks();
     } catch (error) {
       const errorMessage = getErrorFromResponse(error);
@@ -113,7 +126,9 @@ const EmployeeTasks: React.FC = () => {
     try {
       setLoading(true);
       await tasksApi.updateTaskStatus(taskId, "COMPLETADA");
-      message.success("Tarea completada exitosamente");
+      message.success(
+        "Tarea completada exitosamente. El progreso de la reservación se ha actualizado automáticamente."
+      );
       fetchTasks();
       setModalVisible(false);
     } catch (error) {

@@ -13,7 +13,7 @@ CREATE TYPE active_status_enum AS ENUM ('ACTIVO', 'INACTIVO');
 CREATE TYPE quote_status_enum AS ENUM ('PENDIENTE', 'APROBADA', 'RECHAZADA', 'CANCELADA');
 CREATE TYPE reservation_status_enum AS ENUM ('EN_PLANEACION', 'PROGRAMADA', 'ENCURSO', 'FINALIZADA', 'CANCELADA');
 CREATE TYPE task_status_enum AS ENUM ('PENDIENTE', 'ENPROCESO', 'COMPLETADA', 'CANCELADA');
-CREATE TYPE invoice_status_enum AS ENUM ('EMITIDA', 'PAGADA', 'ANULADA');
+-- CREATE TYPE invoice_status_enum AS ENUM ('EMITIDA', 'PAGADA', 'ANULADA');
 
 -- =========================
 -- USUARIOS / PERSONAS
@@ -213,34 +213,4 @@ CREATE TABLE task_history (
     changed_by  UUID REFERENCES users(id) ON DELETE SET NULL,
     notes       TEXT,
     created_at  TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
-);
-
--- =========================
--- FACTURACIÓN
--- =========================
-CREATE TABLE invoices (
-    id               UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    reservation_id   UUID UNIQUE NOT NULL REFERENCES reservations(id) ON DELETE CASCADE,
-    client_id        UUID NOT NULL REFERENCES clients(id) ON DELETE CASCADE,
-    issue_date       TEXT NOT NULL,
-    status           invoice_status_enum NOT NULL DEFAULT 'EMITIDA',
-    subtotal         NUMERIC(12,2) NOT NULL DEFAULT 0,
-    tax_total        NUMERIC(12,2) NOT NULL DEFAULT 0,
-    additional_costs NUMERIC(12,2) NOT NULL DEFAULT 0,
-    total            NUMERIC(12,2) NOT NULL DEFAULT 0,
-    created_by       UUID REFERENCES users(id) ON DELETE SET NULL,
-    created_at       TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at       TIMESTAMP
-);
-
-CREATE TABLE invoice_items (
-    id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    invoice_id  UUID NOT NULL REFERENCES invoices(id) ON DELETE CASCADE,
-    service_id  UUID REFERENCES service_catalog(id) ON DELETE SET NULL,
-    description TEXT,
-    quantity    NUMERIC(12,2) NOT NULL DEFAULT 1,
-    unit_price  NUMERIC(12,2) NOT NULL DEFAULT 0,
-    tax_rate    NUMERIC(5,2)  NOT NULL DEFAULT 0,
-    subtotal    NUMERIC(12,2) NOT NULL DEFAULT 0,
-    total       NUMERIC(12,2) NOT NULL DEFAULT 0
 );

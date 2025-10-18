@@ -3,12 +3,14 @@ package sv.udb.puntoeventoapi.modules.task.controller;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import sv.udb.puntoeventoapi.modules.commons.common.ApiResponse;
 import sv.udb.puntoeventoapi.modules.task.dto.TaskDto;
 import sv.udb.puntoeventoapi.modules.task.dto.TaskResponse;
 import sv.udb.puntoeventoapi.modules.task.service.TaskService;
 import sv.udb.puntoeventoapi.modules.commons.enums.TaskStatus;
+import sv.udb.puntoeventoapi.modules.user.entity.User;
 
 import java.util.List;
 import java.util.UUID;
@@ -23,14 +25,24 @@ public class TaskController {
     @PostMapping
     public ResponseEntity<ApiResponse<TaskResponse>> create(
             @RequestBody @Valid TaskDto dto,
-            @RequestParam UUID createdBy
+            Authentication authentication
     ) {
-        return ResponseEntity.ok(taskService.create(dto, createdBy));
+        User user = (User) authentication.getPrincipal();
+        UUID userId = user.getId();
+        return ResponseEntity.ok(taskService.create(dto, userId));
     }
 
     @GetMapping
     public ResponseEntity<ApiResponse<List<TaskResponse>>> getAll() {
         return ResponseEntity.ok(taskService.getByStatus(TaskStatus.PENDIENTE));
+    }
+
+    @GetMapping("/my-tasks")
+    public ResponseEntity<ApiResponse<List<TaskResponse>>> getMyTasks(
+            Authentication authentication
+    ) {
+        User user = (User) authentication.getPrincipal();
+        return ResponseEntity.ok(taskService.getMyTasks(user.getId()));
     }
 
     @GetMapping("/reservation/{reservationId}")
