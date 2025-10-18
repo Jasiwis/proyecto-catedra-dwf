@@ -3,12 +3,15 @@ package sv.udb.puntoeventoapi.modules.assignment.controller;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import sv.udb.puntoeventoapi.modules.assignment.dto.AssignmentDto;
 import sv.udb.puntoeventoapi.modules.assignment.dto.AssignmentResponse;
 import sv.udb.puntoeventoapi.modules.assignment.service.AssignmentService;
 import sv.udb.puntoeventoapi.modules.commons.common.ApiResponse;
 import sv.udb.puntoeventoapi.modules.commons.common.ApiResponseUtil;
+import sv.udb.puntoeventoapi.modules.commons.common.annotations.CurrentUser;
+import sv.udb.puntoeventoapi.modules.user.entity.User;
 
 import java.util.List;
 import java.util.UUID;
@@ -19,18 +22,24 @@ public class AssignmentController {
 
     private final AssignmentService service;
 
-    @GetMapping("/quotes/{quoteId}/assignments")
-    public ResponseEntity<ApiResponse<List<AssignmentResponse>>> getByQuote(@PathVariable String quoteId) {
-        return ResponseEntity.ok(ApiResponseUtil.success(service.getByQuoteId(UUID.fromString(quoteId))));
+    @GetMapping("/tasks/{taskId}/assignments")
+    public ResponseEntity<ApiResponse<List<AssignmentResponse>>> getByTask(@PathVariable String taskId) {
+        return ResponseEntity.ok(ApiResponseUtil.success(service.getByTaskId(UUID.fromString(taskId))));
+    }
+    
+    @GetMapping("/employees/{employeeId}/assignments")
+    public ResponseEntity<ApiResponse<List<AssignmentResponse>>> getByEmployee(@PathVariable String employeeId) {
+        return ResponseEntity.ok(ApiResponseUtil.success(service.getByEmployeeId(UUID.fromString(employeeId))));
     }
 
-    @PostMapping("/quotes/{quoteId}/assignments")
+    @PostMapping("/tasks/{taskId}/assignments")
     public ResponseEntity<ApiResponse<AssignmentResponse>> create(
-            @PathVariable String quoteId,
-            @RequestBody @Valid AssignmentDto dto
+            @PathVariable String taskId,
+            @RequestBody @Valid AssignmentDto dto,
+            @CurrentUser User currentUser
     ) {
         return ResponseEntity.ok(ApiResponseUtil.success(
-                service.create(UUID.fromString(quoteId), dto)
+                service.create(UUID.fromString(taskId), dto, currentUser.getId())
         ));
     }
 

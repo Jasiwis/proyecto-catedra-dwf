@@ -7,13 +7,14 @@ import sv.udb.puntoeventoapi.modules.task.repository.TaskRepository;
 import sv.udb.puntoeventoapi.modules.task.dto.TaskDto;
 import sv.udb.puntoeventoapi.modules.task.dto.TaskResponse;
 import sv.udb.puntoeventoapi.modules.reservation.repository.ReservationRepository;
-import sv.udb.puntoeventoapi.modules.employee.repository.EmployeeRepository;
+import sv.udb.puntoeventoapi.modules.assignment.repository.AssignmentRepository;
 import sv.udb.puntoeventoapi.modules.commons.enums.TaskStatus;
 import sv.udb.puntoeventoapi.modules.commons.common.ApiResponse;
 
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -21,25 +22,21 @@ public class TaskService {
 
     private final TaskRepository taskRepository;
     private final ReservationRepository reservationRepository;
-    private final EmployeeRepository employeeRepository;
+    private final AssignmentRepository assignmentRepository;
 
-    public ApiResponse<TaskResponse> create(TaskDto dto) {
+    public ApiResponse<TaskResponse> create(TaskDto dto, UUID createdBy) {
         // Verificar que la reserva existe
         var reservation = reservationRepository.findById(dto.reservationId())
                 .orElseThrow(() -> new RuntimeException("Reserva no encontrada"));
 
-        // Verificar que el empleado existe
-        var employee = employeeRepository.findById(dto.employeeId())
-                .orElseThrow(() -> new RuntimeException("Empleado no encontrado"));
-
         Task task = Task.builder()
                 .reservation(reservation)
-                .employee(employee)
                 .serviceId(dto.serviceId())
                 .title(dto.title())
                 .description(dto.description())
                 .status(TaskStatus.PENDIENTE)
                 .startDatetime(LocalDateTime.now())
+                .createdBy(createdBy)
                 .createdAt(LocalDateTime.now())
                 .updatedAt(LocalDateTime.now())
                 .build();
@@ -57,7 +54,15 @@ public class TaskService {
     }
 
     public ApiResponse<List<TaskResponse>> getByEmployee(UUID employeeId) {
-        List<Task> tasks = taskRepository.findByEmployeeId(employeeId);
+        // Obtener todas las asignaciones del empleado
+        var assignments = assignmentRepository.findByEmployeeId(employeeId);
+        
+        // Obtener las tareas de esas asignaciones
+        List<Task> tasks = assignments.stream()
+                .map(assignment -> assignment.getTask())
+                .distinct()
+                .collect(Collectors.toList());
+        
         List<TaskResponse> responses = tasks.stream()
                 .map(this::toResponse)
                 .toList();
@@ -87,13 +92,6 @@ public class TaskService {
             var reservation = reservationRepository.findById(dto.reservationId())
                     .orElseThrow(() -> new RuntimeException("Reserva no encontrada"));
             task.setReservation(reservation);
-        }
-
-        // Verificar que el empleado existe si se está cambiando
-        if (!task.getEmployee().getId().equals(dto.employeeId())) {
-            var employee = employeeRepository.findById(dto.employeeId())
-                    .orElseThrow(() -> new RuntimeException("Empleado no encontrado"));
-            task.setEmployee(employee);
         }
 
         task.setTitle(dto.title());
@@ -128,11 +126,23 @@ public class TaskService {
     }
 
     private TaskResponse toResponse(Task task) {
+        // Obtener empleados asignados a esta tarea
+        var assignments = task.getAssignments();
+        String employeeNames = assignments != null && !assignments.isEmpty()
+                ? assignments.stream()
+                    .map(a -> a.getEmployee().getName())
+                    .collect(Collectors.joining(", "))
+                : "Sin asignar";
+        
+        UUID firstEmployeeId = assignments != null && !assignments.isEmpty()
+                ? assignments.get(0).getEmployee().getId()
+                : null;
+
         return TaskResponse.builder()
                 .id(task.getId())
                 .reservationId(task.getReservation().getId())
-                .employeeId(task.getEmployee().getId())
-                .employeeName(task.getEmployee().getName())
+                .employeeId(firstEmployeeId)
+                .employeeName(employeeNames)
                 .serviceId(task.getServiceId())
                 .title(task.getTitle())
                 .description(task.getDescription())

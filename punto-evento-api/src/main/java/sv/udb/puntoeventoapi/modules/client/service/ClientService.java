@@ -8,6 +8,8 @@ import sv.udb.puntoeventoapi.modules.commons.common.exceptions.FieldValidationEx
 import sv.udb.puntoeventoapi.modules.client.entity.Client;
 import sv.udb.puntoeventoapi.modules.commons.enums.Status;
 import sv.udb.puntoeventoapi.modules.client.repository.ClientRepository;
+import sv.udb.puntoeventoapi.modules.commons.enums.PersonType;
+import sv.udb.puntoeventoapi.modules.user.entity.User;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -104,5 +106,27 @@ public class ClientService {
                 .updatedAt(client.getUpdatedAt())
                 .deactivatedAt(client.getDeactivatedAt())
                 .build();
+    }
+
+    public Client getOrCreateByUser(User user) {
+        return repository.findByUser_Id(user.getId()).orElseGet(() -> {
+            var now = LocalDateTime.now();
+            // Generar un documento único basado en el email o timestamp para evitar UUID muy largo
+            String document = "AUTO-" + System.currentTimeMillis();
+            Client client = Client.builder()
+                    .name(user.getName() != null ? user.getName() : user.getEmail())
+                    .document(document)
+                    .personType(PersonType.Natural)
+                    .phone("")
+                    .email(user.getEmail())
+                    .address("")
+                    .status(Status.Activo)
+                    .createdBy(user.getId())
+                    .createdAt(now)
+                    .updatedAt(now)
+                    .user(user)
+                    .build();
+            return repository.save(client);
+        });
     }
 }

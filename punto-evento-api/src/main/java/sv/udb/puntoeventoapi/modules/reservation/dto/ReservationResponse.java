@@ -4,7 +4,7 @@ import lombok.Data;
 import lombok.Builder;
 import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
-import sv.udb.puntoeventoapi.modules.commons.enums.Status;
+import sv.udb.puntoeventoapi.modules.commons.enums.ReservationStatus;
 import sv.udb.puntoeventoapi.modules.client.entity.Client;
 import sv.udb.puntoeventoapi.modules.quote.entity.Quote;
 import java.math.BigDecimal;
@@ -20,7 +20,8 @@ public class ReservationResponse {
     private UUID id;
     private Quote quote;
     private Client client;
-    private Status status;
+    private String eventName;
+    private ReservationStatus status;
     private String scheduledFor;
     private String location;
     private String notes;

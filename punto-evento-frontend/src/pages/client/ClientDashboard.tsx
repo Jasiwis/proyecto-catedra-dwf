@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { Card, Row, Col, Statistic, Button } from "antd";
 import {
   PlusOutlined,
@@ -7,8 +7,61 @@ import {
   CheckCircleOutlined,
 } from "@ant-design/icons";
 import { Link } from "react-router-dom";
+import { requestsApi } from "../../api/requests";
+import { getMyQuotes } from "../../api/quote";
+import { reservationsApi } from "../../api/reservations";
+import { useAuth } from "../../hooks/use-auth";
 
 const ClientDashboard: React.FC = () => {
+  const { user } = useAuth();
+  const [pendingRequests, setPendingRequests] = useState(0);
+  const [quotesCount, setQuotesCount] = useState(0);
+  const [confirmedEvents, setConfirmedEvents] = useState(0);
+  const [completedEvents, setCompletedEvents] = useState(0);
+  const [scheduledReservations, setScheduledReservations] = useState(0);
+  const [inProgressReservations, setInProgressReservations] = useState(0);
+
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const [reqRes, quotesRes, resvRes] = await Promise.all([
+          requestsApi.getMyRequests(),
+          getMyQuotes(),
+          reservationsApi.getMyReservations(),
+        ]);
+        const reqs = reqRes?.data || [];
+        setPendingRequests(
+          reqs.filter((r) => String(r.status) === "Activo").length
+        );
+
+        const quotes = quotesRes?.data || [];
+        setQuotesCount(quotes.length);
+
+        setConfirmedEvents(
+          quotes.filter((q) => String(q.status) === "Aprobada").length
+        );
+        setCompletedEvents(
+          quotes.filter((q) => String(q.status) === "Finalizada").length
+        );
+
+        const res = resvRes?.data || [];
+        setScheduledReservations(
+          res.filter((r: any) => String(r.status) === "Activo").length
+        );
+        setInProgressReservations(
+          res.filter(
+            (r: any) =>
+              Number(r.progressPercentage || 0) > 0 &&
+              Number(r.progressPercentage || 0) < 100
+          ).length
+        );
+      } catch (e) {
+        // silencioso en dashboard
+      }
+    };
+    load();
+  }, []);
+
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="mb-6">
@@ -24,8 +77,8 @@ const ClientDashboard: React.FC = () => {
         <Col xs={24} sm={12} lg={6}>
           <Card>
             <Statistic
-              title="Solicitudes Pendientes"
-              value={2}
+              title="Solicitudes Activas"
+              value={pendingRequests}
               prefix={<PlusOutlined />}
               valueStyle={{ color: "#1890ff" }}
             />
@@ -35,7 +88,7 @@ const ClientDashboard: React.FC = () => {
           <Card>
             <Statistic
               title="Cotizaciones Recibidas"
-              value={5}
+              value={quotesCount}
               prefix={<FileTextOutlined />}
               valueStyle={{ color: "#52c41a" }}
             />
@@ -45,7 +98,7 @@ const ClientDashboard: React.FC = () => {
           <Card>
             <Statistic
               title="Eventos Confirmados"
-              value={3}
+              value={confirmedEvents}
               prefix={<CalendarOutlined />}
               valueStyle={{ color: "#722ed1" }}
             />
@@ -55,7 +108,7 @@ const ClientDashboard: React.FC = () => {
           <Card>
             <Statistic
               title="Eventos Completados"
-              value={8}
+              value={completedEvents}
               prefix={<CheckCircleOutlined />}
               valueStyle={{ color: "#fa8c16" }}
             />
@@ -89,33 +142,24 @@ const ClientDashboard: React.FC = () => {
             </Link>
           </Card>
         </Col>
+        <Col xs={24} md={12}>
+          <Card title="Mis Reservas" className="h-full">
+            <p className="text-gray-600 mb-4">
+              Consulta y monitorea el avance de tus reservas.
+            </p>
+            <Link to="/client/reservations">
+              <Button type="dashed" block size="large">
+                <CalendarOutlined /> Ver Reservas
+              </Button>
+            </Link>
+          </Card>
+        </Col>
       </Row>
 
       <Row gutter={[16, 16]} className="mt-4">
         <Col xs={24}>
           <Card title="Actividad Reciente">
-            <div className="space-y-3">
-              <div className="flex justify-between items-center p-3 bg-gray-50 rounded">
-                <div>
-                  <h4 className="font-semibold">
-                    Solicitud de Boda - María y Juan
-                  </h4>
-                  <p className="text-sm text-gray-600">
-                    Estado: Cotización pendiente
-                  </p>
-                </div>
-                <span className="text-blue-600 font-semibold">15/01/2024</span>
-              </div>
-              <div className="flex justify-between items-center p-3 bg-gray-50 rounded">
-                <div>
-                  <h4 className="font-semibold">
-                    Evento Corporativo - Empresa ABC
-                  </h4>
-                  <p className="text-sm text-gray-600">Estado: Aprobado</p>
-                </div>
-                <span className="text-green-600 font-semibold">12/01/2024</span>
-              </div>
-            </div>
+            <div className="text-gray-500">Próximamente</div>
           </Card>
         </Col>
       </Row>

@@ -21,8 +21,11 @@ public class TaskController {
     private final TaskService taskService;
 
     @PostMapping
-    public ResponseEntity<ApiResponse<TaskResponse>> create(@RequestBody @Valid TaskDto dto) {
-        return ResponseEntity.ok(taskService.create(dto));
+    public ResponseEntity<ApiResponse<TaskResponse>> create(
+            @RequestBody @Valid TaskDto dto,
+            @RequestParam UUID createdBy
+    ) {
+        return ResponseEntity.ok(taskService.create(dto, createdBy));
     }
 
     @GetMapping

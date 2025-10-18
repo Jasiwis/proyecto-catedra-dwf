@@ -71,6 +71,12 @@ const Header: React.FC<HeaderProps> = ({
       return [
         ...baseItems,
         {
+          key: "requests",
+          icon: <FileTextOutlined />,
+          label: "Solicitudes",
+          to: "/admin/requests",
+        },
+        {
           key: "quotes",
           icon: <FileTextOutlined />,
           label: "Cotizaciones",
@@ -105,6 +111,12 @@ const Header: React.FC<HeaderProps> = ({
           icon: <FileTextOutlined />,
           label: "Mis Cotizaciones",
           to: "/client/quotes",
+        },
+        {
+          key: "reservations",
+          icon: <CalendarOutlined />,
+          label: "Mis Reservas",
+          to: "/client/reservations",
         },
       ];
     }

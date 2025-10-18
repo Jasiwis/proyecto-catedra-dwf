@@ -14,6 +14,9 @@ import java.util.List;
 @AllArgsConstructor
 public class RequestDto {
     
+    @NotBlank(message = "El nombre del evento es requerido")
+    private String eventName;
+    
     @NotBlank(message = "La fecha del evento es requerida")
     private String eventDate;
     

@@ -35,7 +35,7 @@ public class InvoiceService {
                     .orElseThrow(() -> new RuntimeException("Reserva no encontrada"));
             
             // Verificar que la reserva esté finalizada
-            if (reservation.getStatus() != sv.udb.puntoeventoapi.modules.commons.enums.Status.Inactivo) {
+            if (reservation.getStatus() != sv.udb.puntoeventoapi.modules.commons.enums.ReservationStatus.FINALIZADA) {
                 return ApiResponse.error("La reserva debe estar finalizada para generar la factura");
             }
             
@@ -137,7 +137,7 @@ public class InvoiceService {
                     .orElseThrow(() -> new RuntimeException("Reserva no encontrada"));
             
             // Verificar que la reserva esté finalizada
-            if (reservation.getStatus() != sv.udb.puntoeventoapi.modules.commons.enums.Status.Inactivo) {
+            if (reservation.getStatus() != sv.udb.puntoeventoapi.modules.commons.enums.ReservationStatus.FINALIZADA) {
                 return ApiResponse.error("La reserva debe estar finalizada para generar la factura");
             }
             

@@ -2,7 +2,7 @@ package sv.udb.puntoeventoapi.modules.reservation.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
-import sv.udb.puntoeventoapi.modules.commons.enums.Status;
+import sv.udb.puntoeventoapi.modules.commons.enums.ReservationStatus;
 import sv.udb.puntoeventoapi.modules.client.entity.Client;
 import sv.udb.puntoeventoapi.modules.quote.entity.Quote;
 
@@ -30,8 +30,11 @@ public class Reservation {
     @JoinColumn(name = "client_id", nullable = false)
     private Client client;
 
+    @Column(nullable = false)
+    private String eventName;
+
     @Enumerated(EnumType.STRING)
-    private Status status;
+    private ReservationStatus status;
 
     private String scheduledFor;
     private String location;

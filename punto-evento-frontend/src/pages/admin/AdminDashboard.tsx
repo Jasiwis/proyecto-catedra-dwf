@@ -1,5 +1,5 @@
-import React from "react";
-import { Card, Row, Col, Statistic, Button } from "antd";
+import React, { useState, useEffect } from "react";
+import { Card, Row, Col, Statistic, Button, message } from "antd";
 import {
   FileTextOutlined,
   CalendarOutlined,
@@ -7,8 +7,44 @@ import {
   DollarOutlined,
 } from "@ant-design/icons";
 import { Link } from "react-router-dom";
+import { getAllQuotations } from "../../api/quote";
+import { reservationsApi } from "../../api/reservations";
+import { usersApi } from "../../api/users";
 
 const AdminDashboard: React.FC = () => {
+  const [loading, setLoading] = useState(false);
+  const [stats, setStats] = useState({
+    quotes: 0,
+    reservations: 0,
+    users: 0,
+  });
+
+  useEffect(() => {
+    fetchStats();
+  }, []);
+
+  const fetchStats = async () => {
+    try {
+      setLoading(true);
+      const [quotesRes, reservationsRes, usersRes] = await Promise.all([
+        getAllQuotations().catch(() => ({ data: [] })),
+        reservationsApi.getAllReservations().catch(() => ({ data: [] })),
+        usersApi.getAllUsers().catch(() => ({ data: [] })),
+      ]);
+
+      setStats({
+        quotes: quotesRes.data?.length || 0,
+        reservations: reservationsRes.data?.length || 0,
+        users: usersRes.data?.length || 0,
+      });
+    } catch (error) {
+      message.error("Error al cargar estadísticas");
+      console.error(error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="mb-6">
@@ -22,30 +58,30 @@ const AdminDashboard: React.FC = () => {
 
       <Row gutter={[16, 16]} className="mb-8">
         <Col xs={24} sm={12} lg={6}>
-          <Card>
+          <Card loading={loading}>
             <Statistic
-              title="Cotizaciones Pendientes"
-              value={12}
+              title="Cotizaciones"
+              value={stats.quotes}
               prefix={<FileTextOutlined />}
               valueStyle={{ color: "#1890ff" }}
             />
           </Card>
         </Col>
         <Col xs={24} sm={12} lg={6}>
-          <Card>
+          <Card loading={loading}>
             <Statistic
-              title="Reservas Activas"
-              value={8}
+              title="Reservas"
+              value={stats.reservations}
               prefix={<CalendarOutlined />}
               valueStyle={{ color: "#52c41a" }}
             />
           </Card>
         </Col>
         <Col xs={24} sm={12} lg={6}>
-          <Card>
+          <Card loading={loading}>
             <Statistic
               title="Usuarios Registrados"
-              value={156}
+              value={stats.users}
               prefix={<TeamOutlined />}
               valueStyle={{ color: "#722ed1" }}
             />
@@ -54,11 +90,10 @@ const AdminDashboard: React.FC = () => {
         <Col xs={24} sm={12} lg={6}>
           <Card>
             <Statistic
-              title="Ingresos del Mes"
-              value={12580}
+              title="Total Eventos"
+              value={stats.quotes + stats.reservations}
               prefix={<DollarOutlined />}
               valueStyle={{ color: "#fa8c16" }}
-              suffix="$"
             />
           </Card>
         </Col>

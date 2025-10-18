@@ -4,9 +4,10 @@ import jakarta.persistence.*;
 import lombok.*;
 import sv.udb.puntoeventoapi.modules.commons.enums.TaskStatus;
 import sv.udb.puntoeventoapi.modules.reservation.entity.Reservation;
-import sv.udb.puntoeventoapi.modules.employee.entity.Employee;
+import sv.udb.puntoeventoapi.modules.assignment.entity.Assignment;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 
 @Entity
@@ -27,9 +28,8 @@ public class Task {
 
     private UUID serviceId;
 
-    @ManyToOne
-    @JoinColumn(name = "employee_id")
-    private Employee employee;
+    @OneToMany(mappedBy = "task", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<Assignment> assignments;
 
     private String title;
 
@@ -41,6 +41,7 @@ public class Task {
     @Enumerated(EnumType.STRING)
     private TaskStatus status;
 
+    private UUID createdBy;
     private LocalDateTime completedAt;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;

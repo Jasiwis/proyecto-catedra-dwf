@@ -1,6 +1,7 @@
 import React, { useEffect } from "react";
 import {
   Form,
+  Input,
   InputNumber,
   DatePicker,
   Select,
@@ -82,6 +83,13 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
             </Select.Option>
           ))}
         </Select>
+      </Form.Item>
+      <Form.Item
+        name="eventName"
+        label="Nombre del Evento"
+        rules={[{ required: true, message: "Ingrese el nombre del evento" }]}
+      >
+        <Input placeholder="Ej: Boda de María y Juan" />
       </Form.Item>
       <Form.Item
         name="estimatedHours"

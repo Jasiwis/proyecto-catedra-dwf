@@ -17,6 +17,8 @@ import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import java.time.LocalDateTime;
+import java.time.LocalDate;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -35,6 +37,7 @@ public class RequestService {
             
             // Crear la solicitud
             Request request = Request.builder()
+                    .eventName(requestDto.getEventName())
                     .eventDate(requestDto.getEventDate())
                     .location(requestDto.getLocation())
                     .requestedServices(String.join(",", requestDto.getRequestedServices()))
@@ -68,6 +71,49 @@ public class RequestService {
         } catch (Exception e) {
             log.error("Error al obtener solicitudes: {}", e.getMessage());
             return ApiResponse.error("Error al obtener solicitudes: " + e.getMessage());
+        }
+    }
+
+    @Transactional(readOnly = true)
+    public ApiResponse<List<RequestResponse>> getRequestsByClientFiltered(
+            UUID clientId,
+            Optional<String> q,
+            Optional<Status> status,
+            Optional<String> dateFrom,
+            Optional<String> dateTo) {
+        try {
+            List<Request> requests = requestRepository.findByClientId(clientId);
+
+            LocalDate from = dateFrom.map(LocalDate::parse).orElse(null);
+            LocalDate to = dateTo.map(LocalDate::parse).orElse(null);
+
+            List<RequestResponse> responses = requests.stream()
+                    .filter(r -> status.map(s -> r.getStatus() == s).orElse(true))
+                    .filter(r -> {
+                        if (from == null && to == null) return true;
+                        try {
+                            LocalDate ev = LocalDate.parse(r.getEventDate());
+                            boolean geFrom = from == null || !ev.isBefore(from);
+                            boolean leTo = to == null || !ev.isAfter(to);
+                            return geFrom && leTo;
+                        } catch (Exception ex) {
+                            return true;
+                        }
+                    })
+                    .filter(r -> q.map(text -> {
+                        String t = text.toLowerCase();
+                        return (r.getEventName() != null && r.getEventName().toLowerCase().contains(t))
+                                || (r.getLocation() != null && r.getLocation().toLowerCase().contains(t))
+                                || (r.getRequestedServices() != null && r.getRequestedServices().toLowerCase().contains(t))
+                                || (r.getNotes() != null && r.getNotes().toLowerCase().contains(t));
+                    }).orElse(true))
+                    .map(this::toResponse)
+                    .collect(Collectors.toList());
+
+            return ApiResponse.success(responses, "Solicitudes filtradas exitosamente");
+        } catch (Exception e) {
+            log.error("Error al filtrar solicitudes: {}", e.getMessage());
+            return ApiResponse.error("Error al filtrar solicitudes: " + e.getMessage());
         }
     }
     
@@ -120,6 +166,7 @@ public class RequestService {
     private RequestResponse toResponse(Request request) {
         return RequestResponse.builder()
                 .id(request.getId())
+                .eventName(request.getEventName())
                 .eventDate(request.getEventDate())
                 .location(request.getLocation())
                 .requestedServices(request.getRequestedServices())

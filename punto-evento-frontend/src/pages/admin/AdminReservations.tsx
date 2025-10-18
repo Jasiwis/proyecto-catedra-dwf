@@ -12,13 +12,14 @@ import {
   Timeline,
 } from "antd";
 import { EyeOutlined, FileTextOutlined } from "@ant-design/icons";
-import { useAuth } from "../../hooks/use-auth";
 import dayjs from "dayjs";
+import { reservationsApi } from "../../api/reservations";
 
 interface ReservationData {
   id: string;
   quoteId: string;
   clientName: string;
+  eventName: string;
   eventDate: string;
   location: string;
   status: "PROGRAMADA" | "EN_CURSO" | "FINALIZADA" | "CANCELADA";
@@ -36,8 +37,19 @@ interface TaskData {
   dueDate: string;
 }
 
+interface ReservationApiResponse {
+  id: string;
+  quote?: { id: string };
+  client?: { name: string };
+  eventName?: string;
+  scheduledFor?: string;
+  location?: string;
+  status?: string;
+  progressPercentage?: number;
+  createdAt?: string;
+}
+
 const AdminReservations: React.FC = () => {
-  const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [reservations, setReservations] = useState<ReservationData[]>([]);
   const [modalVisible, setModalVisible] = useState(false);
@@ -48,64 +60,45 @@ const AdminReservations: React.FC = () => {
     fetchReservations();
   }, []);
 
+  const mapStatusToEnum = (
+    status: string
+  ): "PROGRAMADA" | "EN_CURSO" | "FINALIZADA" | "CANCELADA" => {
+    const normalized = String(status).toUpperCase();
+    if (normalized === "ACTIVO" || normalized === "PROGRAMADA")
+      return "PROGRAMADA";
+    if (normalized === "EN_CURSO" || normalized === "ENCURSO")
+      return "EN_CURSO";
+    if (normalized === "FINALIZADA" || normalized === "INACTIVO")
+      return "FINALIZADA";
+    if (normalized === "CANCELADA") return "CANCELADA";
+    return "PROGRAMADA"; // Default
+  };
+
   const fetchReservations = async () => {
     try {
       setLoading(true);
-      // Aquí harías la llamada a la API para obtener todas las reservas
-      // const response = await getAllReservations();
-      // setReservations(response.data);
+      const response = await reservationsApi.getAllReservations();
 
-      // Datos de ejemplo
-      setReservations([
-        {
-          id: "1",
-          quoteId: "2",
-          clientName: "María Rodríguez",
-          eventDate: "2024-12-20",
-          location: "Centro de Convenciones",
-          status: "EN_CURSO",
-          progressPercentage: 65,
-          createdAt: "2024-10-17T10:30:00Z",
-          scheduledFor: "2024-12-20T18:00:00Z",
-          tasks: [
-            {
-              id: "1",
-              title: "Instalación de equipo de sonido",
-              status: "COMPLETADA",
-              assignedTo: "Carlos Mendoza",
-              dueDate: "2024-12-20T10:00:00Z",
-            },
-            {
-              id: "2",
-              title: "Entrega de mobiliario",
-              status: "EN_PROCESO",
-              assignedTo: "Ana López",
-              dueDate: "2024-12-20T12:00:00Z",
-            },
-            {
-              id: "3",
-              title: "Coordinación con catering",
-              status: "PENDIENTE",
-              assignedTo: "Roberto Silva",
-              dueDate: "2024-12-20T14:00:00Z",
-            },
-          ],
-        },
-        {
-          id: "2",
-          quoteId: "3",
-          clientName: "Empresa Ejemplo S.A. de C.V.",
-          eventDate: "2024-12-25",
-          location: "Hotel Real Intercontinental",
-          status: "PROGRAMADA",
-          progressPercentage: 0,
-          createdAt: "2024-10-18T14:20:00Z",
-          scheduledFor: "2024-12-25T18:00:00Z",
-          tasks: [],
-        },
-      ]);
+      const reservationsData = (response?.data || []).map(
+        (r: ReservationApiResponse): ReservationData => ({
+          id: r.id,
+          quoteId: r.quote?.id || "",
+          clientName: r.client?.name || "Cliente no disponible",
+          eventName: r.eventName || "Sin nombre",
+          eventDate: r.scheduledFor || "",
+          location: r.location || "",
+          status: mapStatusToEnum(r.status || "ACTIVO"),
+          progressPercentage: Number(r.progressPercentage || 0),
+          createdAt: r.createdAt || new Date().toISOString(),
+          scheduledFor: r.scheduledFor || "",
+          tasks: [], // Las tareas se cargarán por separado si es necesario
+        })
+      );
+
+      setReservations(reservationsData);
     } catch (error) {
       message.error("Error al cargar las reservas");
+      console.error(error);
     } finally {
       setLoading(false);
     }
@@ -116,15 +109,15 @@ const AdminReservations: React.FC = () => {
     setModalVisible(true);
   };
 
-  const handleGenerateInvoice = async (reservationId: string) => {
+  const handleGenerateInvoice = async () => {
     try {
       setLoading(true);
       // Aquí harías la llamada a la API para generar la factura
-      // await generateInvoice(reservationId);
+      // await generateInvoice(selectedReservation.id);
 
       message.success("Factura generada exitosamente");
       fetchReservations();
-    } catch (error) {
+    } catch {
       message.error("Error al generar la factura");
     } finally {
       setLoading(false);
@@ -168,6 +161,12 @@ const AdminReservations: React.FC = () => {
       key: "clientName",
     },
     {
+      title: "Nombre del Evento",
+      dataIndex: "eventName",
+      key: "eventName",
+      ellipsis: true,
+    },
+    {
       title: "Fecha del Evento",
       dataIndex: "eventDate",
       key: "eventDate",
@@ -177,6 +176,7 @@ const AdminReservations: React.FC = () => {
       title: "Ubicación",
       dataIndex: "location",
       key: "location",
+      ellipsis: true,
     },
     {
       title: "Estado",
@@ -203,7 +203,7 @@ const AdminReservations: React.FC = () => {
     {
       title: "Tareas",
       key: "tasks",
-      render: (_, record: ReservationData) => (
+      render: (_: unknown, record: ReservationData) => (
         <span>
           {record.tasks.filter((t) => t.status === "COMPLETADA").length} /{" "}
           {record.tasks.length}
@@ -219,7 +219,7 @@ const AdminReservations: React.FC = () => {
     {
       title: "Acciones",
       key: "actions",
-      render: (_, record: ReservationData) => (
+      render: (_: unknown, record: ReservationData) => (
         <Space>
           <Button
             type="link"
@@ -232,7 +232,10 @@ const AdminReservations: React.FC = () => {
             <Button
               type="link"
               icon={<FileTextOutlined />}
-              onClick={() => handleGenerateInvoice(record.id)}
+              onClick={() => {
+                setSelectedReservation(record);
+                handleGenerateInvoice();
+              }}
               className="text-green-600"
             >
               Generar Factura
@@ -292,17 +295,19 @@ const AdminReservations: React.FC = () => {
         </div>
 
         <Card title="Lista de Reservas">
-          <Table
-            columns={columns}
-            dataSource={reservations}
-            rowKey="id"
-            loading={loading}
-            pagination={{
-              pageSize: 10,
-              showSizeChanger: true,
-              showQuickJumper: true,
-            }}
-          />
+          <div className="overflow-x-auto">
+            <Table
+              columns={columns}
+              dataSource={reservations}
+              rowKey="id"
+              loading={loading}
+              pagination={{
+                pageSize: 10,
+                showSizeChanger: true,
+                showQuickJumper: true,
+              }}
+            />
+          </div>
         </Card>
 
         {/* Modal de Detalles de Reserva */}
@@ -318,9 +323,7 @@ const AdminReservations: React.FC = () => {
                     key="invoice"
                     type="primary"
                     icon={<FileTextOutlined />}
-                    onClick={() =>
-                      handleGenerateInvoice(selectedReservation.id)
-                    }
+                    onClick={handleGenerateInvoice}
                   >
                     Generar Factura
                   </Button>,
@@ -342,6 +345,9 @@ const AdminReservations: React.FC = () => {
               >
                 <Descriptions.Item label="Cliente">
                   {selectedReservation.clientName}
+                </Descriptions.Item>
+                <Descriptions.Item label="Nombre del Evento" span={2}>
+                  {selectedReservation.eventName}
                 </Descriptions.Item>
                 <Descriptions.Item label="Fecha del Evento">
                   {dayjs(selectedReservation.eventDate).format("DD/MM/YYYY")}
@@ -377,39 +383,43 @@ const AdminReservations: React.FC = () => {
                   <h4 className="text-lg font-semibold mb-3">
                     Tareas del Evento
                   </h4>
-                  <Table
-                    dataSource={selectedReservation.tasks}
-                    rowKey="id"
-                    pagination={false}
-                    size="small"
-                    columns={[
-                      {
-                        title: "Tarea",
-                        dataIndex: "title",
-                        key: "title",
-                      },
-                      {
-                        title: "Asignada a",
-                        dataIndex: "assignedTo",
-                        key: "assignedTo",
-                      },
-                      {
-                        title: "Estado",
-                        dataIndex: "status",
-                        key: "status",
-                        render: (status: string) => (
-                          <Tag color={getTaskStatusColor(status)}>{status}</Tag>
-                        ),
-                      },
-                      {
-                        title: "Fecha Límite",
-                        dataIndex: "dueDate",
-                        key: "dueDate",
-                        render: (date: string) =>
-                          dayjs(date).format("DD/MM/YYYY HH:mm"),
-                      },
-                    ]}
-                  />
+                  <div className="overflow-x-auto">
+                    <Table
+                      dataSource={selectedReservation.tasks}
+                      rowKey="id"
+                      pagination={false}
+                      size="small"
+                      columns={[
+                        {
+                          title: "Tarea",
+                          dataIndex: "title",
+                          key: "title",
+                        },
+                        {
+                          title: "Asignada a",
+                          dataIndex: "assignedTo",
+                          key: "assignedTo",
+                        },
+                        {
+                          title: "Estado",
+                          dataIndex: "status",
+                          key: "status",
+                          render: (status: string) => (
+                            <Tag color={getTaskStatusColor(status)}>
+                              {status}
+                            </Tag>
+                          ),
+                        },
+                        {
+                          title: "Fecha Límite",
+                          dataIndex: "dueDate",
+                          key: "dueDate",
+                          render: (date: string) =>
+                            dayjs(date).format("DD/MM/YYYY HH:mm"),
+                        },
+                      ]}
+                    />
+                  </div>
                 </div>
               )}
 

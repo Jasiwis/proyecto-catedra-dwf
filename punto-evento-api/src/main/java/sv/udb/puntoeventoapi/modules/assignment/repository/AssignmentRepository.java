@@ -7,5 +7,6 @@ import java.util.List;
 import java.util.UUID;
 
 public interface AssignmentRepository extends JpaRepository<Assignment, UUID> {
-    List<Assignment> findByQuoteId(UUID quoteId);
+    List<Assignment> findByTaskId(UUID taskId);
+    List<Assignment> findByEmployeeId(UUID employeeId);
 }

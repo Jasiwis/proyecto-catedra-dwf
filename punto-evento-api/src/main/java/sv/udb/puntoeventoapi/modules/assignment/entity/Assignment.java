@@ -2,12 +2,15 @@ package sv.udb.puntoeventoapi.modules.assignment.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+import sv.udb.puntoeventoapi.modules.task.entity.Task;
+import sv.udb.puntoeventoapi.modules.employee.entity.Employee;
 
 import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Entity
-@Table(name = "assignments")
+@Table(name = "assignments", 
+       uniqueConstraints = @UniqueConstraint(columnNames = {"task_id", "employee_id"}))
 @Getter @Setter
 @Builder
 @NoArgsConstructor
@@ -18,18 +21,16 @@ public class Assignment {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
-    private UUID quoteId;
-    private UUID employeeId;
+    @ManyToOne
+    @JoinColumn(name = "task_id", nullable = false)
+    private Task task;
 
-    private String title;
+    @ManyToOne
+    @JoinColumn(name = "employee_id", nullable = false)
+    private Employee employee;
 
-    private LocalDateTime startDatetime;
-    private LocalDateTime endDatetime;
-
-    private Integer estimatedHours;
-    private Double baseCost;
-    private Double extraPercentage;
-
-    private LocalDateTime createdAt;
-    private LocalDateTime updatedAt;
+    private UUID assignedBy;
+    private LocalDateTime assignedAt;
+    
+    private String notes;
 }

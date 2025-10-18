@@ -4,6 +4,7 @@ export interface Reservation {
   id: string;
   quoteId: string;
   clientId: string;
+  eventName: string;
   status: string;
   scheduledFor: string;
   location: string;
@@ -15,6 +16,7 @@ export interface Reservation {
 
 export interface CreateReservationRequest {
   quoteId: string;
+  eventName: string;
   scheduledFor: string;
   location: string;
   notes?: string;
@@ -37,25 +39,38 @@ export const reservationsApi = {
   createReservation: async (
     reservationData: CreateReservationRequest
   ): Promise<ReservationResponse> => {
-    const response = await axiosClient.post("/reservations", reservationData);
+    const response = await axiosClient.post(
+      "/api/reservations",
+      reservationData
+    );
     return response.data;
   },
 
   // Obtener todas las reservas del cliente actual
-  getMyReservations: async (): Promise<ReservationsListResponse> => {
-    const response = await axiosClient.get("/reservations/my-reservations");
+  getMyReservations: async (params?: {
+    q?: string;
+    status?: string;
+    dateFrom?: string;
+    dateTo?: string;
+  }): Promise<ReservationsListResponse> => {
+    const response = await axiosClient.get(
+      "/api/reservations/my-reservations",
+      {
+        params,
+      }
+    );
     return response.data;
   },
 
   // Obtener todas las reservas (solo admin)
   getAllReservations: async (): Promise<ReservationsListResponse> => {
-    const response = await axiosClient.get("/reservations");
+    const response = await axiosClient.get("/api/reservations");
     return response.data;
   },
 
   // Obtener reserva por ID
   getReservationById: async (id: string): Promise<ReservationResponse> => {
-    const response = await axiosClient.get(`/reservations/${id}`);
+    const response = await axiosClient.get(`/api/reservations/${id}`);
     return response.data;
   },
 
@@ -64,9 +79,12 @@ export const reservationsApi = {
     id: string,
     progress: number
   ): Promise<ReservationResponse> => {
-    const response = await axiosClient.patch(`/reservations/${id}/progress`, {
-      progress,
-    });
+    const response = await axiosClient.patch(
+      `/api/reservations/${id}/progress`,
+      {
+        progress,
+      }
+    );
     return response.data;
   },
 
@@ -75,7 +93,7 @@ export const reservationsApi = {
     id: string,
     status: string
   ): Promise<ReservationResponse> => {
-    const response = await axiosClient.patch(`/reservations/${id}/status`, {
+    const response = await axiosClient.patch(`/api/reservations/${id}/status`, {
       status,
     });
     return response.data;

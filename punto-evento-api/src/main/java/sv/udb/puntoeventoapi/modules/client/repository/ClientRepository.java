@@ -7,4 +7,5 @@ import java.util.UUID;
 
 public interface ClientRepository extends JpaRepository<Client, UUID> {
     boolean existsByDocument(String document);
+    java.util.Optional<Client> findByUser_Id(UUID userId);
 }

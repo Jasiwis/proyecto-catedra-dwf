@@ -13,8 +13,10 @@ import { UserType } from "../enums/user-type.enum";
 import ClientRequests from "../pages/client/ClientRequests";
 import ClientQuotes from "../pages/client/ClientQuotes";
 import ClientDashboard from "../pages/client/ClientDashboard";
+import ClientReservations from "../pages/client/ClientReservations";
 import AdminQuotes from "../pages/admin/AdminQuotes";
 import AdminReservations from "../pages/admin/AdminReservations";
+import AdminRequests from "../pages/admin/AdminRequests";
 import AdminDashboard from "../pages/admin/AdminDashboard";
 import EmployeeTasks from "../pages/employee/EmployeeTasks";
 import EmployeeDashboard from "../pages/employee/EmployeeDashboard";
@@ -76,6 +78,14 @@ export const router = createBrowserRouter([
         ),
       },
       {
+        path: "/admin/requests",
+        element: (
+          <RoleProtectedRoute allowedRoles={[UserType.ADMIN]}>
+            <AdminRequests />
+          </RoleProtectedRoute>
+        ),
+      },
+      {
         path: "/admin/users",
         element: (
           <RoleProtectedRoute allowedRoles={[UserType.ADMIN]}>
@@ -108,6 +118,14 @@ export const router = createBrowserRouter([
         element: (
           <RoleProtectedRoute allowedRoles={[UserType.CLIENT]}>
             <ClientQuotes />
+          </RoleProtectedRoute>
+        ),
+      },
+      {
+        path: "/client/reservations",
+        element: (
+          <RoleProtectedRoute allowedRoles={[UserType.CLIENT]}>
+            <ClientReservations />
           </RoleProtectedRoute>
         ),
       },

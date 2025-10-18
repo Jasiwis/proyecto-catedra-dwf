@@ -8,7 +8,10 @@ import sv.udb.puntoeventoapi.modules.reservation.dto.ReservationDto;
 import sv.udb.puntoeventoapi.modules.reservation.dto.ReservationResponse;
 import sv.udb.puntoeventoapi.modules.reservation.service.ReservationService;
 import sv.udb.puntoeventoapi.modules.commons.common.ApiResponse;
-import sv.udb.puntoeventoapi.modules.commons.enums.Status;
+import sv.udb.puntoeventoapi.modules.commons.enums.ReservationStatus;
+import sv.udb.puntoeventoapi.modules.commons.common.annotations.CurrentUser;
+import sv.udb.puntoeventoapi.modules.user.entity.User;
+import sv.udb.puntoeventoapi.modules.client.service.ClientService;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -21,6 +24,7 @@ import java.util.UUID;
 public class ReservationController {
     
     private final ReservationService reservationService;
+    private final ClientService clientService;
     
     @PostMapping
     public ResponseEntity<ApiResponse<ReservationResponse>> createReservation(
@@ -49,10 +53,20 @@ public class ReservationController {
     
     @GetMapping("/my-reservations")
     public ResponseEntity<ApiResponse<List<ReservationResponse>>> getMyReservations(
-            Authentication authentication) {
+            @CurrentUser User currentUser,
+            @RequestParam(required = false) String q,
+            @RequestParam(required = false) ReservationStatus status,
+            @RequestParam(required = false) String dateFrom,
+            @RequestParam(required = false) String dateTo) {
         
-        UUID userId = UUID.fromString(authentication.getName());
-        ApiResponse<List<ReservationResponse>> response = reservationService.getReservationsByClient(userId);
+        var client = clientService.getOrCreateByUser(currentUser);
+        ApiResponse<List<ReservationResponse>> response = reservationService.getReservationsByClientFiltered(
+                client.getId(),
+                java.util.Optional.ofNullable(q),
+                java.util.Optional.ofNullable(status),
+                java.util.Optional.ofNullable(dateFrom),
+                java.util.Optional.ofNullable(dateTo)
+        );
         return ResponseEntity.ok(response);
     }
     
@@ -75,7 +89,7 @@ public class ReservationController {
     @PatchMapping("/{id}/status")
     public ResponseEntity<ApiResponse<ReservationResponse>> updateStatus(
             @PathVariable UUID id,
-            @RequestParam Status status) {
+            @RequestParam ReservationStatus status) {
         
         ApiResponse<ReservationResponse> response = reservationService.updateReservationStatus(id, status);
         return ResponseEntity.ok(response);

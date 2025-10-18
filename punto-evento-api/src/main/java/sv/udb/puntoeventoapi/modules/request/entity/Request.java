@@ -21,6 +21,9 @@ public class Request {
     private UUID id;
 
     @Column(nullable = false)
+    private String eventName;
+
+    @Column(nullable = false)
     private String eventDate;
 
     @Column(nullable = false)

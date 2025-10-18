@@ -12,14 +12,21 @@ import {
   Space,
   Modal,
 } from "antd";
-import { PlusOutlined, EyeOutlined } from "@ant-design/icons";
+import {
+  PlusOutlined,
+  EyeOutlined,
+  SearchOutlined,
+  ReloadOutlined,
+} from "@ant-design/icons";
 import { useAuth } from "../../hooks/use-auth";
 import dayjs from "dayjs";
+import { requestsApi } from "../../api/requests";
 
 const { TextArea } = Input;
 
 interface RequestData {
   id: string;
+  eventName: string;
   eventDate: string;
   location: string;
   requestedServices: string;
@@ -33,6 +40,11 @@ const ClientRequests: React.FC = () => {
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
   const [requests, setRequests] = useState<RequestData[]>([]);
+  const [searchText, setSearchText] = useState("");
+  const [statusFilter, setStatusFilter] = useState<string | undefined>(
+    undefined
+  );
+  const [dateRange, setDateRange] = useState<any[]>([]);
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState<RequestData | null>(
     null
@@ -51,27 +63,33 @@ const ClientRequests: React.FC = () => {
 
   useEffect(() => {
     fetchRequests();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const fetchRequests = async () => {
     try {
       setLoading(true);
-      // Aquí harías la llamada a la API para obtener las solicitudes del cliente
-      // const response = await getClientRequests(user?.id);
-      // setRequests(response.data);
-
-      // Datos de ejemplo
-      setRequests([
-        {
-          id: "1",
-          eventDate: "2024-12-25",
-          location: "Hotel Real Intercontinental",
-          requestedServices: "Música, Catering, Mobiliario",
-          notes: "Evento corporativo de fin de año",
-          status: "PENDIENTE",
-          createdAt: "2024-10-15T10:30:00Z",
-        },
-      ]);
+      const response = await requestsApi.getMyRequests({
+        q: searchText || undefined,
+        status: statusFilter,
+        dateFrom: dateRange?.[0]
+          ? dayjs(dateRange[0]).format("YYYY-MM-DD")
+          : undefined,
+        dateTo: dateRange?.[1]
+          ? dayjs(dateRange[1]).format("YYYY-MM-DD")
+          : undefined,
+      });
+      const data = (response?.data || []).map((r) => ({
+        id: r.id,
+        eventName: r.eventName,
+        eventDate: r.eventDate,
+        location: r.location,
+        requestedServices: r.requestedServices,
+        notes: r.notes,
+        status: String(r.status).toUpperCase(),
+        createdAt: r.createdAt,
+      }));
+      setRequests(data);
     } catch (error) {
       message.error("Error al cargar las solicitudes");
     } finally {
@@ -82,17 +100,14 @@ const ClientRequests: React.FC = () => {
   const handleSubmit = async (values: any) => {
     try {
       setLoading(true);
-
       const requestData = {
+        eventName: values.eventName,
         eventDate: values.eventDate.format("YYYY-MM-DD"),
         location: values.location,
-        requestedServices: JSON.stringify(values.services),
+        requestedServices: values.services,
         notes: values.notes,
-        clientId: user?.id,
       };
-
-      // Aquí harías la llamada a la API para crear la solicitud
-      // await createRequest(requestData);
+      await requestsApi.createRequest(requestData);
 
       message.success("Solicitud creada exitosamente");
       form.resetFields();
@@ -111,10 +126,17 @@ const ClientRequests: React.FC = () => {
 
   const columns = [
     {
+      title: "Nombre del Evento",
+      dataIndex: "eventName",
+      key: "eventName",
+    },
+    {
       title: "Fecha del Evento",
       dataIndex: "eventDate",
       key: "eventDate",
       render: (date: string) => dayjs(date).format("DD/MM/YYYY"),
+      sorter: (a: RequestData, b: RequestData) =>
+        dayjs(a.eventDate).unix() - dayjs(b.eventDate).unix(),
     },
     {
       title: "Ubicación",
@@ -125,19 +147,28 @@ const ClientRequests: React.FC = () => {
       title: "Servicios",
       dataIndex: "requestedServices",
       key: "requestedServices",
+      ellipsis: true,
     },
     {
       title: "Estado",
       dataIndex: "status",
       key: "status",
+      filters: [
+        { text: "Activo", value: "ACTIVO" },
+        { text: "Inactivo", value: "INACTIVO" },
+      ],
+      filteredValue: statusFilter ? [statusFilter] : null,
+      onFilter: (value: string, record: RequestData) =>
+        String(record.status).toUpperCase() === String(value).toUpperCase(),
       render: (status: string) => {
+        const normalized = String(status).toUpperCase();
         const color =
-          status === "PENDIENTE"
-            ? "orange"
-            : status === "APROBADA"
-            ? "green"
-            : "red";
-        return <Tag color={color}>{status}</Tag>;
+          normalized === "ACTIVO"
+            ? "blue"
+            : normalized === "INACTIVO"
+            ? "default"
+            : "geekblue";
+        return <Tag color={color}>{normalized}</Tag>;
       },
     },
     {
@@ -183,6 +214,19 @@ const ClientRequests: React.FC = () => {
             extra={<PlusOutlined />}
           >
             <Form form={form} layout="vertical" onFinish={handleSubmit}>
+              <Form.Item
+                name="eventName"
+                label="Nombre del Evento"
+                rules={[
+                  {
+                    required: true,
+                    message: "Ingresa el nombre del evento",
+                  },
+                ]}
+              >
+                <Input placeholder="Ej: Boda de María y Juan" />
+              </Form.Item>
+
               <Form.Item
                 name="eventDate"
                 label="Fecha del Evento"
@@ -250,18 +294,66 @@ const ClientRequests: React.FC = () => {
 
           {/* Lista de Solicitudes */}
           <div className="lg:col-span-2">
-            <Card title="Mis Solicitudes">
-              <Table
-                columns={columns}
-                dataSource={requests}
-                rowKey="id"
-                loading={loading}
-                pagination={{
-                  pageSize: 5,
-                  showSizeChanger: true,
-                  showQuickJumper: true,
-                }}
-              />
+            <Card
+              title="Mis Solicitudes"
+              extra={
+                <Space>
+                  <Input
+                    allowClear
+                    placeholder="Buscar..."
+                    prefix={<SearchOutlined />}
+                    value={searchText}
+                    onChange={(e) => setSearchText(e.target.value)}
+                    style={{ width: 220 }}
+                  />
+                  <Select
+                    allowClear
+                    placeholder="Estado"
+                    value={statusFilter}
+                    onChange={(v) => setStatusFilter(v)}
+                    options={[
+                      { label: "Activo", value: "ACTIVO" },
+                      { label: "Inactivo", value: "INACTIVO" },
+                    ]}
+                    style={{ width: 160 }}
+                  />
+                  <DatePicker.RangePicker
+                    value={dateRange as any}
+                    onChange={(val) => setDateRange(val as any)}
+                  />
+                  <Button onClick={fetchRequests} type="primary">
+                    Buscar
+                  </Button>
+                  <Button
+                    icon={<ReloadOutlined />}
+                    onClick={() => {
+                      setSearchText("");
+                      setStatusFilter(undefined);
+                      setDateRange([]);
+                      fetchRequests();
+                    }}
+                  />
+                </Space>
+              }
+            >
+              <div className="overflow-x-auto">
+                <Table
+                  columns={columns}
+                  dataSource={requests}
+                  rowKey="id"
+                  loading={loading}
+                  scroll={{ x: "max-content" }}
+                  pagination={{
+                    pageSize: 5,
+                    showSizeChanger: true,
+                    showQuickJumper: true,
+                  }}
+                  onChange={(pagination, filters) => {
+                    const status = filters.status?.[0] as string | undefined;
+                    setStatusFilter(status);
+                  }}
+                />
+              </div>
             </Card>
           </div>
         </div>
@@ -279,6 +371,9 @@ const ClientRequests: React.FC = () => {
         >
           {selectedRequest && (
             <div className="space-y-4">
+              <div>
+                <strong>Nombre del Evento:</strong> {selectedRequest.eventName}
+              </div>
               <div>
                 <strong>Fecha del Evento:</strong>{" "}
                 {dayjs(selectedRequest.eventDate).format("DD/MM/YYYY")}

@@ -6,6 +6,8 @@ import sv.udb.puntoeventoapi.modules.assignment.dto.AssignmentDto;
 import sv.udb.puntoeventoapi.modules.assignment.dto.AssignmentResponse;
 import sv.udb.puntoeventoapi.modules.assignment.entity.Assignment;
 import sv.udb.puntoeventoapi.modules.assignment.repository.AssignmentRepository;
+import sv.udb.puntoeventoapi.modules.task.repository.TaskRepository;
+import sv.udb.puntoeventoapi.modules.employee.repository.EmployeeRepository;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -16,29 +18,35 @@ import java.util.UUID;
 public class AssignmentService {
 
     private final AssignmentRepository repository;
+    private final TaskRepository taskRepository;
+    private final EmployeeRepository employeeRepository;
 
-    public AssignmentResponse create(UUID quoteId, AssignmentDto dto) {
-        if (dto.endDatetime().isBefore(dto.startDatetime()) || dto.endDatetime().isEqual(dto.startDatetime())) {
-            throw new IllegalArgumentException("La fecha de fin debe ser posterior a la fecha de inicio.");
-        }
+    public AssignmentResponse create(UUID taskId, AssignmentDto dto, UUID createdBy) {
+        var task = taskRepository.findById(taskId)
+                .orElseThrow(() -> new RuntimeException("Tarea no encontrada"));
+        
+        var employee = employeeRepository.findById(dto.employeeId())
+                .orElseThrow(() -> new RuntimeException("Empleado no encontrado"));
 
         Assignment assignment = Assignment.builder()
-                .quoteId(quoteId)
-                .employeeId(dto.employeeId())
-                .title(dto.title())
-                .startDatetime(dto.startDatetime())
-                .endDatetime(dto.endDatetime())
-                .estimatedHours(dto.estimatedHours())
-                .baseCost(dto.baseCost())
-                .extraPercentage(dto.extraPercentage())
-                .createdAt(LocalDateTime.now())
+                .task(task)
+                .employee(employee)
+                .assignedBy(createdBy)
+                .assignedAt(LocalDateTime.now())
+                .notes(dto.notes())
                 .build();
 
         return toResponse(repository.save(assignment));
     }
 
-    public List<AssignmentResponse> getByQuoteId(UUID quoteId) {
-        return repository.findByQuoteId(quoteId).stream()
+    public List<AssignmentResponse> getByTaskId(UUID taskId) {
+        return repository.findByTaskId(taskId).stream()
+                .map(this::toResponse)
+                .toList();
+    }
+
+    public List<AssignmentResponse> getByEmployeeId(UUID employeeId) {
+        return repository.findByEmployeeId(employeeId).stream()
                 .map(this::toResponse)
                 .toList();
     }
@@ -53,14 +61,13 @@ public class AssignmentService {
         Assignment assignment = repository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Asignación no encontrada"));
 
-        assignment.setEmployeeId(dto.employeeId());
-        assignment.setTitle(dto.title());
-        assignment.setStartDatetime(dto.startDatetime());
-        assignment.setEndDatetime(dto.endDatetime());
-        assignment.setEstimatedHours(dto.estimatedHours());
-        assignment.setBaseCost(dto.baseCost());
-        assignment.setExtraPercentage(dto.extraPercentage());
-        assignment.setUpdatedAt(LocalDateTime.now());
+        if (dto.employeeId() != null && !assignment.getEmployee().getId().equals(dto.employeeId())) {
+            var employee = employeeRepository.findById(dto.employeeId())
+                    .orElseThrow(() -> new RuntimeException("Empleado no encontrado"));
+            assignment.setEmployee(employee);
+        }
+
+        assignment.setNotes(dto.notes());
 
         return toResponse(repository.save(assignment));
     }
@@ -74,16 +81,12 @@ public class AssignmentService {
     private AssignmentResponse toResponse(Assignment a) {
         return AssignmentResponse.builder()
                 .id(a.getId())
-                .quoteId(a.getQuoteId())
-                .employeeId(a.getEmployeeId())
-                .title(a.getTitle())
-                .startDatetime(a.getStartDatetime())
-                .endDatetime(a.getEndDatetime())
-                .estimatedHours(a.getEstimatedHours())
-                .baseCost(a.getBaseCost())
-                .extraPercentage(a.getExtraPercentage())
-                .createdAt(a.getCreatedAt())
-                .updatedAt(a.getUpdatedAt())
+                .taskId(a.getTask() != null ? a.getTask().getId() : null)
+                .employeeId(a.getEmployee() != null ? a.getEmployee().getId() : null)
+                .employeeName(a.getEmployee() != null ? a.getEmployee().getName() : null)
+                .assignedBy(a.getAssignedBy())
+                .assignedAt(a.getAssignedAt())
+                .notes(a.getNotes())
                 .build();
     }
 }

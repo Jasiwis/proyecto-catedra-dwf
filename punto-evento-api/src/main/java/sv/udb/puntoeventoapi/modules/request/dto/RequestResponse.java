@@ -16,6 +16,7 @@ import java.time.LocalDateTime;
 public class RequestResponse {
     
     private UUID id;
+    private String eventName;
     private String eventDate;
     private String location;
     private String requestedServices;

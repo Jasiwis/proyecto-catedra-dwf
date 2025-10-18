@@ -299,17 +299,19 @@ const EmployeeTasks: React.FC = () => {
       </div>
 
       <Card title="Lista de Tareas">
-        <Table
-          columns={columns}
-          dataSource={tasks}
-          rowKey="id"
-          loading={loading}
-          pagination={{
-            pageSize: 10,
-            showSizeChanger: true,
-            showQuickJumper: true,
-          }}
-        />
+        <div className="overflow-x-auto">
+          <Table
+            columns={columns}
+            dataSource={tasks}
+            rowKey="id"
+            loading={loading}
+            pagination={{
+              pageSize: 10,
+              showSizeChanger: true,
+              showQuickJumper: true,
+            }}
+          />
+        </div>
       </Card>
 
       {/* Modal de Detalles de Tarea */}

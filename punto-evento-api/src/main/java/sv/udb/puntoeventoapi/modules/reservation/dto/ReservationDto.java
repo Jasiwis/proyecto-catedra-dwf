@@ -18,6 +18,9 @@ public class ReservationDto {
     @NotNull(message = "El ID de la cotización es requerido")
     private UUID quoteId;
     
+    @NotBlank(message = "El nombre del evento es requerido")
+    private String eventName;
+    
     @NotBlank(message = "La fecha programada es requerida")
     private String scheduledFor;
     

@@ -8,4 +8,5 @@ import java.util.UUID;
 
 public interface QuoteRepository extends JpaRepository<Quote, UUID> {
     List<Quote> findByClientId(UUID clientId);
+    List<Quote> findByRequestId(UUID requestId);
 }

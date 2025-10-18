@@ -59,6 +59,12 @@ public class DataSeeder implements CommandLineRunner {
     public void run(String... args) {
         log.info("🌱 Iniciando seeder de datos...");
         
+        // Verificar si ya existen datos en la base de datos
+        if (userRepository.count() > 0) {
+            log.info("⏭️  La base de datos ya contiene datos. Saltando seeder...");
+            return;
+        }
+        
         User admin = createDefaultAdmin();
         User employee = createDefaultEmployee();
         createSampleClients(admin);
@@ -380,6 +386,7 @@ public class DataSeeder implements CommandLineRunner {
         
         // Solicitud 1
         Request request1 = Request.builder()
+                .eventName("Cena de Fin de Año Empresarial")
                 .eventDate("2024-12-25")
                 .location("Hotel Real Intercontinental")
                 .requestedServices("Música, Catering, Mobiliario")
@@ -392,16 +399,17 @@ public class DataSeeder implements CommandLineRunner {
                 .build();
         
         requestRepository.save(request1);
-        log.info("📋 Solicitud creada: {} - {}", request1.getEventDate(), request1.getLocation());
+        log.info("📋 Solicitud creada: {} - {} - {}", request1.getEventName(), request1.getEventDate(), request1.getLocation());
         
         // Solicitud 2 (si hay más clientes)
         if (clients.size() > 1) {
             Client client2 = clients.get(1);
             Request request2 = Request.builder()
+                    .eventName("Boda de María y Juan")
                     .eventDate("2024-12-20")
                     .location("Centro de Convenciones")
                     .requestedServices("Sonido, Iluminación, Decoraciones")
-                    .notes("Boda de María y Juan")
+                    .notes("Ceremonia y recepción de boda")
                     .status(Status.Activo)
                     .client(client2)
                     .createdBy(admin.getId())
@@ -410,7 +418,27 @@ public class DataSeeder implements CommandLineRunner {
                     .build();
             
             requestRepository.save(request2);
-            log.info("📋 Solicitud creada: {} - {}", request2.getEventDate(), request2.getLocation());
+            log.info("📋 Solicitud creada: {} - {} - {}", request2.getEventName(), request2.getEventDate(), request2.getLocation());
+        }
+        
+        // Solicitud 3 (si hay más clientes)
+        if (clients.size() > 2) {
+            Client client3 = clients.get(2);
+            Request request3 = Request.builder()
+                    .eventName("Fiesta de Cumpleaños Corporativo")
+                    .eventDate("2024-12-15")
+                    .location("Salón de Eventos Plaza Merliot")
+                    .requestedServices("Música, Catering, Decoraciones")
+                    .notes("Celebración de aniversario de empresa")
+                    .status(Status.Activo)
+                    .client(client3)
+                    .createdBy(admin.getId())
+                    .createdAt(LocalDateTime.now())
+                    .updatedAt(LocalDateTime.now())
+                    .build();
+            
+            requestRepository.save(request3);
+            log.info("📋 Solicitud creada: {} - {} - {}", request3.getEventName(), request3.getEventDate(), request3.getLocation());
         }
     }
     
@@ -453,25 +481,19 @@ public class DataSeeder implements CommandLineRunner {
             return;
         }
         
-        // Aprobar la primera cotización y crear reserva
+        // Aprobar la primera cotización (esto creará automáticamente la reservación)
         Quote quote = quotes.get(0);
         try {
-            // Aprobar cotización
-            quoteService.approveQuote(quote.getId());
+            // Usar el nuevo flujo: aprobar la cotización crea automáticamente la reservación
+            sv.udb.puntoeventoapi.modules.quote.dto.ApproveRejectQuoteDto approveDto = 
+                new sv.udb.puntoeventoapi.modules.quote.dto.ApproveRejectQuoteDto();
+            approveDto.setAction("APROBAR");
+            approveDto.setNotes("Aprobación automática del seeder");
             
-            // Crear reserva
-            ReservationDto reservationDto = ReservationDto.builder()
-                    .quoteId(quote.getId())
-                    .scheduledFor("2024-12-25T18:00:00")
-                    .location(quote.getClient().getAddress())
-                    .notes("Evento corporativo de fin de año")
-                    .progressPercentage(BigDecimal.ZERO)
-                    .build();
-            
-            reservationService.createReservation(reservationDto, admin.getId());
-            log.info("📅 Reserva creada para cotización: {}", quote.getId());
+            quoteService.approveOrRejectQuote(quote.getId(), approveDto, admin.getId());
+            log.info("📅 Cotización aprobada y reserva creada automáticamente: {}", quote.getId());
         } catch (Exception e) {
-            log.error("Error al crear reserva: {}", e.getMessage());
+            log.error("Error al aprobar cotización y crear reserva: {}", e.getMessage());
         }
     }
     
@@ -491,30 +513,28 @@ public class DataSeeder implements CommandLineRunner {
         // Obtener empleados
         Employee employee1 = employees.get(0);
         
-        // Tarea 1
+        // Tarea 1 - Sin relación directa con employee
         Task task1 = Task.builder()
                 .reservation(reservation)
                 .title("Instalación de equipo de sonido")
                 .description("Configurar y probar el sistema de audio para el evento")
-                .employee(employee1)
                 .status(sv.udb.puntoeventoapi.modules.commons.enums.TaskStatus.PENDIENTE)
                 .startDatetime(LocalDateTime.now())
                 .endDatetime(LocalDateTime.now().plusDays(1))
+                .createdBy(admin.getId())
                 .createdAt(LocalDateTime.now())
                 .updatedAt(LocalDateTime.now())
                 .build();
         
         Task savedTask1 = taskRepository.save(task1);
+        
+        // Crear asignación de tarea a empleado (relación muchos-a-muchos)
         Assignment assignment1 = Assignment.builder()
-                .title("Instalación de equipo de sonido")
-                .employeeId(employee1.getId())
-                .startDatetime(LocalDateTime.now())
-                .endDatetime(LocalDateTime.now().plusDays(1))
-                .estimatedHours(8)
-                .baseCost(500.0)
-                .extraPercentage(0.0)
-                .createdAt(LocalDateTime.now())
-                .updatedAt(LocalDateTime.now())
+                .task(savedTask1)
+                .employee(employee1)
+                .assignedBy(admin.getId())
+                .assignedAt(LocalDateTime.now())
+                .notes("Encargado principal de audio")
                 .build();
         
         assignmentRepository.save(assignment1);
@@ -527,10 +547,10 @@ public class DataSeeder implements CommandLineRunner {
                     .reservation(reservation)
                     .title("Entrega de mobiliario")
                     .description("Entregar y colocar mesas y sillas para el evento")
-                    .employee(employee2)
                     .status(sv.udb.puntoeventoapi.modules.commons.enums.TaskStatus.PENDIENTE)
                     .startDatetime(LocalDateTime.now())
                     .endDatetime(LocalDateTime.now().plusDays(1))
+                    .createdBy(admin.getId())
                     .createdAt(LocalDateTime.now())
                     .updatedAt(LocalDateTime.now())
                     .build();
@@ -538,19 +558,30 @@ public class DataSeeder implements CommandLineRunner {
             Task savedTask2 = taskRepository.save(task2);
             
             Assignment assignment2 = Assignment.builder()
-                    .title("Entrega de mobiliario")
-                    .employeeId(employee2.getId())
-                    .startDatetime(LocalDateTime.now())
-                    .endDatetime(LocalDateTime.now().plusDays(1))
-                    .estimatedHours(6)
-                    .baseCost(300.0)
-                    .extraPercentage(0.0)
-                    .createdAt(LocalDateTime.now())
-                    .updatedAt(LocalDateTime.now())
+                    .task(savedTask2)
+                    .employee(employee2)
+                    .assignedBy(admin.getId())
+                    .assignedAt(LocalDateTime.now())
+                    .notes("Encargado de montaje")
                     .build();
             
             assignmentRepository.save(assignment2);
             log.info("📝 Tarea creada y asignada: {} -> {}", task2.getTitle(), employee2.getName());
+            
+            // Opcional: Asignar un tercer empleado a la misma tarea para demostrar múltiples asignaciones
+            if (employees.size() > 2) {
+                Employee employee3 = employees.get(2);
+                Assignment assignment3 = Assignment.builder()
+                        .task(savedTask2)
+                        .employee(employee3)
+                        .assignedBy(admin.getId())
+                        .assignedAt(LocalDateTime.now())
+                        .notes("Apoyo en montaje")
+                        .build();
+                
+                assignmentRepository.save(assignment3);
+                log.info("📝 Asignación adicional creada: {} -> {}", task2.getTitle(), employee3.getName());
+            }
         }
     }
 }

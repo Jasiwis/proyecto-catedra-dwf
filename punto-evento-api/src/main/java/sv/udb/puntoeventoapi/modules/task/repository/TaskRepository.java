@@ -9,7 +9,6 @@ import java.util.UUID;
 
 public interface TaskRepository extends JpaRepository<Task, UUID> {
     List<Task> findByReservationId(UUID reservationId);
-    List<Task> findByEmployeeId(UUID employeeId);
     List<Task> findByStatus(TaskStatus status);
     List<Task> findByReservationIdAndStatus(UUID reservationId, TaskStatus status);
 }

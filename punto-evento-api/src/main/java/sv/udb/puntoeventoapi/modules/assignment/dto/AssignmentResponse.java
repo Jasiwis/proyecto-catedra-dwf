@@ -8,14 +8,10 @@ import java.util.UUID;
 @Builder
 public record AssignmentResponse(
         UUID id,
-        UUID quoteId,
+        UUID taskId,
         UUID employeeId,
-        String title,
-        LocalDateTime startDatetime,
-        LocalDateTime endDatetime,
-        Integer estimatedHours,
-        Double baseCost,
-        Double extraPercentage,
-        LocalDateTime createdAt,
-        LocalDateTime updatedAt
+        String employeeName,
+        UUID assignedBy,
+        LocalDateTime assignedAt,
+        String notes
 ) {}

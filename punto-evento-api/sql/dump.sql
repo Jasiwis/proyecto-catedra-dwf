@@ -11,7 +11,7 @@ CREATE TYPE person_type_enum AS ENUM ('NATURAL', 'JURIDICA');
 CREATE TYPE contract_type_enum AS ENUM ('PERMANENTE', 'PORHORAS');
 CREATE TYPE active_status_enum AS ENUM ('ACTIVO', 'INACTIVO');
 CREATE TYPE quote_status_enum AS ENUM ('PENDIENTE', 'APROBADA', 'RECHAZADA', 'CANCELADA');
-CREATE TYPE reservation_status_enum AS ENUM ('PROGRAMADA', 'ENCURSO', 'FINALIZADA', 'CANCELADA');
+CREATE TYPE reservation_status_enum AS ENUM ('EN_PLANEACION', 'PROGRAMADA', 'ENCURSO', 'FINALIZADA', 'CANCELADA');
 CREATE TYPE task_status_enum AS ENUM ('PENDIENTE', 'ENPROCESO', 'COMPLETADA', 'CANCELADA');
 CREATE TYPE invoice_status_enum AS ENUM ('EMITIDA', 'PAGADA', 'ANULADA');
 
@@ -102,6 +102,7 @@ CREATE TABLE service_catalog (
 CREATE TABLE requests (
     id                 UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     client_id          UUID NOT NULL REFERENCES clients(id) ON DELETE CASCADE,
+    event_name         TEXT NOT NULL,
     event_date         TEXT NOT NULL,
     location           TEXT NOT NULL,
     requested_services TEXT NOT NULL,
@@ -119,6 +120,7 @@ CREATE TABLE quotes (
     id               UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     request_id       UUID REFERENCES requests(id) ON DELETE SET NULL,
     client_id        UUID NOT NULL REFERENCES clients(id) ON DELETE CASCADE,
+    event_name       TEXT NOT NULL,
     status           quote_status_enum NOT NULL DEFAULT 'PENDIENTE',
     start_date       DATE,
     end_date         DATE,
@@ -151,6 +153,7 @@ CREATE TABLE reservations (
     id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     quote_id      UUID UNIQUE NOT NULL REFERENCES quotes(id) ON DELETE CASCADE,
     client_id     UUID NOT NULL REFERENCES clients(id) ON DELETE CASCADE,
+    event_name    TEXT NOT NULL,
     status        reservation_status_enum NOT NULL DEFAULT 'PROGRAMADA',
     scheduled_for TEXT,
     location      TEXT NOT NULL,
@@ -175,16 +178,32 @@ CREATE TABLE tasks (
     id             UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     reservation_id UUID NOT NULL REFERENCES reservations(id) ON DELETE CASCADE,
     service_id     UUID REFERENCES service_catalog(id) ON DELETE SET NULL,
-    employee_id    UUID REFERENCES employees(id) ON DELETE SET NULL,
     title          TEXT NOT NULL,
     description    TEXT,
     start_datetime TIMESTAMP,
     end_datetime   TIMESTAMP,
     status         task_status_enum NOT NULL DEFAULT 'PENDIENTE',
     completed_at   TIMESTAMP,
+    created_by     UUID REFERENCES users(id) ON DELETE SET NULL,
     created_at     TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at     TIMESTAMP
 );
+
+-- =========================
+-- ASIGNACIONES (Muchos a Muchos: Tasks <-> Employees)
+-- =========================
+CREATE TABLE assignments (
+    id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    task_id     UUID NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
+    employee_id UUID NOT NULL REFERENCES employees(id) ON DELETE CASCADE,
+    assigned_by UUID REFERENCES users(id) ON DELETE SET NULL,
+    assigned_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    notes       TEXT,
+    UNIQUE(task_id, employee_id)
+);
+
+CREATE INDEX idx_assignments_task ON assignments(task_id);
+CREATE INDEX idx_assignments_employee ON assignments(employee_id);
 
 CREATE TABLE task_history (
     id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),

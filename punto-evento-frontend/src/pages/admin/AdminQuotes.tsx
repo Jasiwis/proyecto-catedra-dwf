@@ -19,6 +19,7 @@ interface QuoteData {
   id: string;
   requestId: string;
   clientName: string;
+  eventName: string;
   eventDate: string;
   location: string;
   status: "PENDIENTE" | "APROBADA" | "RECHAZADA";
@@ -42,6 +43,7 @@ interface ApiQuote {
   id: string;
   requestId?: string;
   client?: { name?: string };
+  eventName?: string;
   startDate?: string;
   location?: string;
   status?: string;
@@ -71,6 +73,7 @@ const AdminQuotes: React.FC = () => {
         id: quote.id,
         requestId: quote.requestId || "",
         clientName: quote.client?.name || "Cliente no disponible",
+        eventName: quote.eventName || "Sin nombre",
         eventDate: quote.startDate || "",
         location: quote.location || "",
         status: (quote.status || "PENDIENTE") as
@@ -154,15 +157,16 @@ const AdminQuotes: React.FC = () => {
       key: "clientName",
     },
     {
+      title: "Nombre del Evento",
+      dataIndex: "eventName",
+      key: "eventName",
+      ellipsis: true,
+    },
+    {
       title: "Fecha del Evento",
       dataIndex: "eventDate",
       key: "eventDate",
       render: (date: string) => dayjs(date).format("DD/MM/YYYY"),
-    },
-    {
-      title: "Ubicación",
-      dataIndex: "location",
-      key: "location",
     },
     {
       title: "Estado",
@@ -227,17 +231,19 @@ const AdminQuotes: React.FC = () => {
       </div>
 
       <Card title="Lista de Cotizaciones">
-        <Table
-          columns={columns}
-          dataSource={quotes}
-          rowKey="id"
-          loading={loading}
-          pagination={{
-            pageSize: 10,
-            showSizeChanger: true,
-            showQuickJumper: true,
-          }}
-        />
+        <div className="overflow-x-auto">
+          <Table
+            columns={columns}
+            dataSource={quotes}
+            rowKey="id"
+            loading={loading}
+            pagination={{
+              pageSize: 10,
+              showSizeChanger: true,
+              showQuickJumper: true,
+            }}
+          />
+        </div>
       </Card>
 
       {/* Modal de Edición de Cotización */}
@@ -258,13 +264,16 @@ const AdminQuotes: React.FC = () => {
                   <strong>Cliente:</strong> {selectedQuote.clientName}
                 </div>
                 <div>
+                  <strong>Nombre del Evento:</strong> {selectedQuote.eventName}
+                </div>
+                <div>
                   <strong>Fecha:</strong>{" "}
                   {dayjs(selectedQuote.eventDate).format("DD/MM/YYYY")}
                 </div>
                 <div>
-                  <strong>Ubicación:</strong> {selectedQuote.location}
+                  <strong>Ubicación:</strong> {selectedQuote.location || "N/A"}
                 </div>
-                <div>
+                <div className="col-span-2">
                   <strong>Estado:</strong>{" "}
                   <Tag color={getStatusColor(selectedQuote.status)}>
                     {selectedQuote.status}
