@@ -23,10 +23,8 @@ const EmployeeDashboard: React.FC = () => {
   const fetchTasks = async () => {
     try {
       setLoading(true);
-      if (user?.id) {
-        const response = await tasksApi.getTasksByEmployee(user.id);
-        setTasks(response.data);
-      }
+      const response = await tasksApi.getMyTasks();
+      setTasks(response.data);
     } catch (error) {
       const errorMessage = getErrorFromResponse(error);
       message.error(`Error al cargar las tareas: ${errorMessage}`);
@@ -36,9 +34,7 @@ const EmployeeDashboard: React.FC = () => {
   };
 
   const pendingTasks = tasks.filter((t) => t.status === "PENDIENTE").length;
-  const inProgressTasks = tasks.filter(
-    (t) => t.status === "EN_PROGRESO"
-  ).length;
+  const inProgressTasks = tasks.filter((t) => t.status === "EN_PROCESO").length;
   const completedTasks = tasks.filter((t) => t.status === "COMPLETADA").length;
 
   return (

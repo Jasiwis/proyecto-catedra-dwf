@@ -40,20 +40,23 @@ const ClientDashboard: React.FC = () => {
         setConfirmedEvents(
           quotes.filter((q) => String(q.status) === "Aprobada").length
         );
-        setCompletedEvents(
-          quotes.filter((q) => String(q.status) === "Finalizada").length
-        );
 
         const res = resvRes?.data || [];
-        setScheduledReservations(
-          res.filter((r: any) => String(r.status) === "Activo").length
+
+        // Contar eventos completados de reservaciones
+        setCompletedEvents(
+          res.filter((r: any) => String(r.status) === "FINALIZADA").length
         );
-        setInProgressReservations(
+
+        setScheduledReservations(
           res.filter(
             (r: any) =>
-              Number(r.progressPercentage || 0) > 0 &&
-              Number(r.progressPercentage || 0) < 100
+              String(r.status) === "PROGRAMADA" ||
+              String(r.status) === "EN_PLANEACION"
           ).length
+        );
+        setInProgressReservations(
+          res.filter((r: any) => String(r.status) === "ENCURSO").length
         );
       } catch (e) {
         // silencioso en dashboard

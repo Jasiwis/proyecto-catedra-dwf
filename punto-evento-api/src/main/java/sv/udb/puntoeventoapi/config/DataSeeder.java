@@ -186,12 +186,12 @@ public class DataSeeder implements CommandLineRunner {
             now.minusDays(45)
         );
         
-        Quote quote1 = createQuote(req1, admin, QuoteStatus.APROBADA, 
+        Quote quote1 = createQuote(req1, admin, QuoteStatus.Aprobada, 
             new BigDecimal("8500.00"), new BigDecimal("1105.00"), new BigDecimal("250.00"),
             now.minusDays(43));
         
         Reservation reservation1 = createReservation(
-            quote1, admin, 
+            quote1, req1, admin, 
             now.plusDays(60).format(formatter),
             ReservationStatus.FINALIZADA,
             now.minusDays(42)
@@ -228,14 +228,14 @@ public class DataSeeder implements CommandLineRunner {
             now.minusDays(30)
         );
         
-        Quote quote2 = createQuote(req2, admin, QuoteStatus.APROBADA,
+        Quote quote2 = createQuote(req2, admin, QuoteStatus.Aprobada,
             new BigDecimal("5500.00"), new BigDecimal("715.00"), new BigDecimal("150.00"),
             now.minusDays(28));
         
         Reservation reservation2 = createReservation(
-            quote2, admin,
+            quote2, req2, admin,
             now.plusDays(3).format(formatter),
-            ReservationStatus.EN_CURSO,
+            ReservationStatus.ENCURSO,
             now.minusDays(27)
         );
         
@@ -276,12 +276,12 @@ public class DataSeeder implements CommandLineRunner {
             now.minusDays(25)
         );
         
-        Quote quote3 = createQuote(req3, admin, QuoteStatus.APROBADA,
+        Quote quote3 = createQuote(req3, admin, QuoteStatus.Aprobada,
             new BigDecimal("4200.00"), new BigDecimal("546.00"), new BigDecimal("100.00"),
             now.minusDays(23));
         
         Reservation reservation3 = createReservation(
-            quote3, admin,
+            quote3, req3, admin,
             now.plusDays(15).format(formatter),
             ReservationStatus.PROGRAMADA,
             now.minusDays(22)
@@ -324,12 +324,12 @@ public class DataSeeder implements CommandLineRunner {
             now.minusDays(10)
         );
         
-        Quote quote4 = createQuote(req4, admin, QuoteStatus.APROBADA,
+        Quote quote4 = createQuote(req4, admin, QuoteStatus.Aprobada,
             new BigDecimal("2800.00"), new BigDecimal("364.00"), new BigDecimal("80.00"),
             now.minusDays(8));
         
         Reservation reservation4 = createReservation(
-            quote4, admin,
+            quote4, req4, admin,
             now.plusDays(30).format(formatter),
             ReservationStatus.EN_PLANEACION,
             now.minusDays(7)
@@ -364,7 +364,7 @@ public class DataSeeder implements CommandLineRunner {
             now.minusDays(15)
         );
         
-        createQuote(req5, admin, QuoteStatus.RECHAZADA,
+        createQuote(req5, admin, QuoteStatus.Rechazada,
             new BigDecimal("1500.00"), new BigDecimal("195.00"), new BigDecimal("50.00"),
             now.minusDays(13));
         
@@ -380,7 +380,7 @@ public class DataSeeder implements CommandLineRunner {
             now.minusDays(5)
         );
         
-        createQuote(req6, admin, QuoteStatus.PENDIENTE,
+        createQuote(req6, admin, QuoteStatus.Pendiente,
             new BigDecimal("6500.00"), new BigDecimal("845.00"), new BigDecimal("200.00"),
             now.minusDays(3));
         
@@ -408,12 +408,12 @@ public class DataSeeder implements CommandLineRunner {
             now.minusDays(35)
         );
         
-        Quote quote8 = createQuote(req8, admin, QuoteStatus.APROBADA,
+        Quote quote8 = createQuote(req8, admin, QuoteStatus.Aprobada,
             new BigDecimal("12000.00"), new BigDecimal("1560.00"), new BigDecimal("500.00"),
             now.minusDays(33));
         
         createReservation(
-            quote8, admin,
+            quote8, req8, admin,
             now.plusDays(50).format(formatter),
             ReservationStatus.CANCELADA,
             now.minusDays(32)
@@ -449,14 +449,10 @@ public class DataSeeder implements CommandLineRunner {
                 .request(request)
                 .client(request.getClient())
                 .eventName(request.getEventName())
-                .eventDate(request.getEventDate())
-                .location(request.getLocation())
-                .requestedServices(request.getRequestedServices())
-                .notes(request.getNotes())
                 .subtotal(subtotal)
                 .taxTotal(taxes)
                 .additionalCosts(additional)
-                .grandTotal(subtotal.add(taxes).add(additional))
+                .total(subtotal.add(taxes).add(additional))
                 .status(status)
                 .createdBy(admin.getId())
                 .createdAt(createdAt)
@@ -468,14 +464,13 @@ public class DataSeeder implements CommandLineRunner {
         return saved;
     }
 
-    private Reservation createReservation(Quote quote, User admin, String scheduledFor,
+    private Reservation createReservation(Quote quote, Request request, User admin, String scheduledFor,
                                          ReservationStatus status, LocalDateTime createdAt) {
         Reservation reservation = Reservation.builder()
                 .quote(quote)
                 .client(quote.getClient())
                 .eventName(quote.getEventName())
-                .eventDate(quote.getEventDate())
-                .location(quote.getLocation())
+                .location(request.getLocation())
                 .scheduledFor(scheduledFor)
                 .status(status)
                 .createdBy(admin.getId())

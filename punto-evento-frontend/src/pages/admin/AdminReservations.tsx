@@ -20,6 +20,7 @@ import {
   EyeOutlined,
   PlusOutlined,
   CheckCircleOutlined,
+  CloseCircleOutlined,
 } from "@ant-design/icons";
 import dayjs from "dayjs";
 import { reservationsApi } from "../../api/reservations";
@@ -138,6 +139,48 @@ const AdminReservations: React.FC = () => {
     } catch (error) {
       message.error("Error al publicar la reservación");
       console.error(error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCancelReservation = async (reservationId: string) => {
+    console.log("🔴 Intentando cancelar reservación:", reservationId);
+
+    // Primero probemos sin el modal para ver si el problema está ahí
+    try {
+      setLoading(true);
+      console.log("📡 Llamando al backend para cancelar reservación...");
+
+      const response = await reservationsApi.cancelReservation(reservationId);
+      console.log("📡 Respuesta del backend:", response);
+
+      if (response.success) {
+        message.success("Reservación cancelada exitosamente");
+
+        // Recargar la reservación seleccionada con los datos actualizados
+        const detailResponse = await reservationsApi.getReservationById(
+          reservationId
+        );
+        if (detailResponse.success && detailResponse.data) {
+          setSelectedReservation(detailResponse.data);
+        }
+
+        // Recargar todas las reservaciones en segundo plano
+        fetchReservations();
+      } else {
+        message.error(response.message || "Error al cancelar la reservación");
+      }
+    } catch (error) {
+      console.error("❌ Error al cancelar reservación:", error);
+      let errorMessage = "Error al cancelar la reservación";
+      if (error && typeof error === "object" && "response" in error) {
+        const axiosError = error as {
+          response?: { data?: { message?: string } };
+        };
+        errorMessage = axiosError.response?.data?.message || errorMessage;
+      }
+      message.error(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -423,11 +466,46 @@ const AdminReservations: React.FC = () => {
                   >
                     Publicar Reservación
                   </Button>,
+                  <Button
+                    key="cancel"
+                    danger
+                    icon={<CloseCircleOutlined />}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      console.log("🔴 Botón cancelar clickeado en Admin");
+                      handleCancelReservation(selectedReservation!.id);
+                    }}
+                  >
+                    Cancelar Reservación
+                  </Button>,
+                  <Button key="close" onClick={() => setModalVisible(false)}>
+                    Cerrar
+                  </Button>,
+                ]
+              : String(selectedReservation?.status).toUpperCase() ===
+                  "CANCELADA" ||
+                String(selectedReservation?.status).toUpperCase() ===
+                  "FINALIZADA"
+              ? [
                   <Button key="close" onClick={() => setModalVisible(false)}>
                     Cerrar
                   </Button>,
                 ]
               : [
+                  <Button
+                    key="cancel"
+                    danger
+                    icon={<CloseCircleOutlined />}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      console.log("🔴 Botón cancelar clickeado en Admin");
+                      handleCancelReservation(selectedReservation!.id);
+                    }}
+                  >
+                    Cancelar Reservación
+                  </Button>,
                   <Button key="close" onClick={() => setModalVisible(false)}>
                     Cerrar
                   </Button>,

@@ -136,9 +136,22 @@ public class TaskService {
                 .distinct()
                 .collect(Collectors.toList());
         
-        List<TaskResponse> responses = tasks.stream()
+        // Filtrar solo las tareas cuya reservación esté en estado PROGRAMADA, ENCURSO o FINALIZADA
+        // (NO mostrar tareas de reservaciones EN_PLANEACION o CANCELADA)
+        List<Task> filteredTasks = tasks.stream()
+                .filter(task -> {
+                    var reservationStatus = task.getReservation().getStatus();
+                    return reservationStatus == sv.udb.puntoeventoapi.modules.commons.enums.ReservationStatus.PROGRAMADA ||
+                           reservationStatus == sv.udb.puntoeventoapi.modules.commons.enums.ReservationStatus.ENCURSO ||
+                           reservationStatus == sv.udb.puntoeventoapi.modules.commons.enums.ReservationStatus.FINALIZADA;
+                })
+                .collect(Collectors.toList());
+        
+        List<TaskResponse> responses = filteredTasks.stream()
                 .map(this::toResponse)
                 .toList();
+        
+        log.info("Tareas filtradas para empleado {}: {} de {} totales", employeeId, filteredTasks.size(), tasks.size());
         return ApiResponse.success(responses, "Tareas del empleado obtenidas exitosamente");
     }
 

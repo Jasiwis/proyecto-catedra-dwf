@@ -18,7 +18,10 @@ import sv.udb.puntoeventoapi.modules.task.dto.TaskResponse;
 import sv.udb.puntoeventoapi.modules.request.entity.Request;
 import sv.udb.puntoeventoapi.modules.client.entity.Client;
 import sv.udb.puntoeventoapi.modules.commons.enums.ReservationStatus;
+import sv.udb.puntoeventoapi.modules.commons.enums.UserType;
 import sv.udb.puntoeventoapi.modules.commons.common.ApiResponse;
+import sv.udb.puntoeventoapi.modules.user.entity.User;
+import sv.udb.puntoeventoapi.modules.user.repository.UserRepository;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -37,6 +40,7 @@ public class ReservationService {
     private final ReservationRepository reservationRepository;
     private final QuoteRepository quoteRepository;
     private final TaskRepository taskRepository;
+    private final UserRepository userRepository;
     
     public ApiResponse<ReservationResponse> createReservation(ReservationDto reservationDto, UUID createdBy) {
         try {
@@ -251,6 +255,27 @@ public class ReservationService {
                 .map(this::taskToResponse)
                 .collect(Collectors.toList());
         
+        // Calcular el porcentaje de progreso basado en las tareas
+        BigDecimal calculatedProgress;
+        if (tasks.isEmpty()) {
+            calculatedProgress = BigDecimal.ZERO;
+        } else {
+            long completedTasks = tasks.stream()
+                    .filter(task -> task.getStatus() == sv.udb.puntoeventoapi.modules.commons.enums.TaskStatus.COMPLETADA)
+                    .count();
+            
+            calculatedProgress = BigDecimal.valueOf((completedTasks * 100.0) / tasks.size())
+                    .setScale(2, java.math.RoundingMode.HALF_UP);
+        }
+        
+        // Si el progreso en la BD es null o diferente al calculado, actualizarlo
+        if (reservation.getProgressPercentage() == null || 
+            reservation.getProgressPercentage().compareTo(calculatedProgress) != 0) {
+            reservation.setProgressPercentage(calculatedProgress);
+            reservation.setUpdatedAt(LocalDateTime.now());
+            reservationRepository.save(reservation);
+        }
+        
         return ReservationResponse.builder()
                 .id(reservation.getId())
                 .quote(reservation.getQuote())
@@ -260,7 +285,7 @@ public class ReservationService {
                 .scheduledFor(reservation.getScheduledFor())
                 .location(reservation.getLocation())
                 .notes(reservation.getNotes())
-                .progressPercentage(reservation.getProgressPercentage())
+                .progressPercentage(calculatedProgress)
                 .createdBy(reservation.getCreatedBy())
                 .createdAt(reservation.getCreatedAt())
                 .updatedAt(reservation.getUpdatedAt())
@@ -370,13 +395,34 @@ public class ReservationService {
                 })
                 .collect(Collectors.toList());
         
+        // Calcular el porcentaje de progreso basado en las tareas
+        BigDecimal calculatedProgress;
+        if (tasks.isEmpty()) {
+            calculatedProgress = BigDecimal.ZERO;
+        } else {
+            long completedTasks = tasks.stream()
+                    .filter(task -> task.getStatus() == sv.udb.puntoeventoapi.modules.commons.enums.TaskStatus.COMPLETADA)
+                    .count();
+            
+            calculatedProgress = BigDecimal.valueOf((completedTasks * 100.0) / tasks.size())
+                    .setScale(2, java.math.RoundingMode.HALF_UP);
+        }
+        
+        // Si el progreso en la BD es null o diferente al calculado, actualizarlo
+        if (reservation.getProgressPercentage() == null || 
+            reservation.getProgressPercentage().compareTo(calculatedProgress) != 0) {
+            reservation.setProgressPercentage(calculatedProgress);
+            reservation.setUpdatedAt(LocalDateTime.now());
+            reservationRepository.save(reservation);
+        }
+        
         return ReservationDetailResponse.builder()
                 .id(reservation.getId())
                 .eventName(reservation.getEventName())
                 .scheduledFor(reservation.getScheduledFor())
                 .location(reservation.getLocation())
                 .status(reservation.getStatus())
-                .progressPercentage(reservation.getProgressPercentage())
+                .progressPercentage(calculatedProgress)
                 .notes(reservation.getNotes())
                 .createdAt(reservation.getCreatedAt())
                 .updatedAt(reservation.getUpdatedAt())
@@ -386,5 +432,77 @@ public class ReservationService {
                 .services(services)
                 .tasks(taskInfos)
                 .build();
+    }
+    
+    public ApiResponse<ReservationDetailResponse> cancelReservation(UUID id, UUID userId) {
+        try {
+            // Obtener el usuario que intenta cancelar
+            User user = userRepository.findById(userId)
+                    .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
+            
+            // Obtener la reservación
+            Reservation reservation = reservationRepository.findById(id)
+                    .orElseThrow(() -> new RuntimeException("Reserva no encontrada"));
+            
+            // Validar permisos: ADMIN puede cancelar cualquier reservación, 
+            // CLIENT solo puede cancelar sus propias reservaciones
+            if (user.getUserType() == UserType.CLIENT) {
+                // Verificar que la reservación pertenezca al cliente
+                if (!reservation.getClient().getUser().getId().equals(userId)) {
+                    log.warn("Usuario {} intentó cancelar reservación {} que no le pertenece", userId, id);
+                    return ApiResponse.error("No tienes permiso para cancelar esta reservación");
+                }
+            }
+            
+            // Validar que la reservación no esté ya cancelada
+            if (reservation.getStatus() == ReservationStatus.CANCELADA) {
+                return ApiResponse.error("La reservación ya está cancelada");
+            }
+            
+            // Validar que la reservación no esté finalizada
+            if (reservation.getStatus() == ReservationStatus.FINALIZADA) {
+                return ApiResponse.error("No se puede cancelar una reservación finalizada");
+            }
+            
+            // Cambiar el estado a CANCELADA
+            reservation.setStatus(ReservationStatus.CANCELADA);
+            reservation.setUpdatedAt(LocalDateTime.now());
+            
+            Reservation savedReservation = reservationRepository.save(reservation);
+            log.info("Reservación {} cancelada por usuario {} ({})", id, userId, user.getUserType());
+            
+            return ApiResponse.success(toDetailResponse(savedReservation), "Reservación cancelada exitosamente");
+        } catch (Exception e) {
+            log.error("Error al cancelar reservación: {}", e.getMessage());
+            return ApiResponse.error("Error al cancelar reservación: " + e.getMessage());
+        }
+    }
+    
+    public void updateProgressBasedOnTasks(UUID reservationId) {
+        try {
+            Reservation reservation = reservationRepository.findById(reservationId)
+                    .orElseThrow(() -> new RuntimeException("Reserva no encontrada"));
+            
+            List<Task> tasks = taskRepository.findByReservationId(reservationId);
+            
+            if (tasks.isEmpty()) {
+                reservation.setProgressPercentage(BigDecimal.ZERO);
+            } else {
+                long completedTasks = tasks.stream()
+                        .filter(task -> task.getStatus() == sv.udb.puntoeventoapi.modules.commons.enums.TaskStatus.COMPLETADA)
+                        .count();
+                
+                BigDecimal progress = BigDecimal.valueOf((completedTasks * 100.0) / tasks.size())
+                        .setScale(2, java.math.RoundingMode.HALF_UP);
+                
+                reservation.setProgressPercentage(progress);
+                log.info("Progreso de reservación {} actualizado a: {}%", reservationId, progress);
+            }
+            
+            reservation.setUpdatedAt(LocalDateTime.now());
+            reservationRepository.save(reservation);
+        } catch (Exception e) {
+            log.error("Error al actualizar progreso de reservación: {}", e.getMessage());
+        }
     }
 }

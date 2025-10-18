@@ -101,4 +101,12 @@ public class ReservationController {
         ApiResponse<ReservationDetailResponse> response = reservationService.publishReservation(id);
         return ResponseEntity.status(response.isSuccess() ? 200 : 400).body(response);
     }
+    
+    @PostMapping("/{id}/cancel")
+    public ResponseEntity<ApiResponse<ReservationDetailResponse>> cancelReservation(
+            @PathVariable UUID id,
+            @CurrentUser User currentUser) {
+        ApiResponse<ReservationDetailResponse> response = reservationService.cancelReservation(id, currentUser.getId());
+        return ResponseEntity.status(response.isSuccess() ? 200 : 400).body(response);
+    }
 }

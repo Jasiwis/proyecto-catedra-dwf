@@ -159,4 +159,17 @@ export const reservationsApi = {
     const response = await axiosClient.post(`/api/reservations/${id}/publish`);
     return response.data;
   },
+
+  // Cancelar reservación
+  cancelReservation: async (id: string): Promise<ReservationResponse> => {
+    console.log("🌐 API: Cancelando reservación con ID:", id);
+    try {
+      const response = await axiosClient.post(`/api/reservations/${id}/cancel`);
+      console.log("🌐 API: Respuesta exitosa:", response.data);
+      return response.data;
+    } catch (error) {
+      console.error("🌐 API: Error al cancelar reservación:", error);
+      throw error;
+    }
+  },
 };

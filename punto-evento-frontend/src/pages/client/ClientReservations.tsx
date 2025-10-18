@@ -14,7 +14,12 @@ import {
   DatePicker,
   Divider,
 } from "antd";
-import { EyeOutlined, SearchOutlined, ReloadOutlined } from "@ant-design/icons";
+import {
+  EyeOutlined,
+  SearchOutlined,
+  ReloadOutlined,
+  CloseCircleOutlined,
+} from "@ant-design/icons";
 import dayjs from "dayjs";
 import { reservationsApi } from "../../api/reservations";
 import type { ReservationDetail } from "../../api/reservations";
@@ -61,6 +66,52 @@ const ClientReservations: React.FC = () => {
   const showReservationDetails = (reservation: ReservationDetail) => {
     setSelectedReservation(reservation);
     setModalVisible(true);
+  };
+
+  const handleCancelReservation = async (reservationId: string) => {
+    console.log("🔴 Cliente intentando cancelar reservación:", reservationId);
+
+    // Primero probemos sin el modal para ver si el problema está ahí
+    try {
+      setLoading(true);
+      console.log(
+        "📡 Cliente llamando al backend para cancelar reservación..."
+      );
+
+      const response = await reservationsApi.cancelReservation(reservationId);
+      console.log("📡 Respuesta del backend:", response);
+
+      if (response.success) {
+        message.success("Reservación cancelada exitosamente");
+
+        // Actualizar la vista del modal si está abierta
+        if (selectedReservation?.id === reservationId) {
+          const detailResponse = await reservationsApi.getReservationById(
+            reservationId
+          );
+          if (detailResponse.success && detailResponse.data) {
+            setSelectedReservation(detailResponse.data);
+          }
+        }
+
+        // Recargar todas las reservaciones
+        fetchReservations();
+      } else {
+        message.error(response.message || "Error al cancelar la reservación");
+      }
+    } catch (error) {
+      console.error("❌ Error al cancelar reservación:", error);
+      let errorMessage = "Error al cancelar la reservación";
+      if (error && typeof error === "object" && "response" in error) {
+        const axiosError = error as {
+          response?: { data?: { message?: string } };
+        };
+        errorMessage = axiosError.response?.data?.message || errorMessage;
+      }
+      message.error(errorMessage);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const getStatusColor = (status: string) => {
@@ -298,11 +349,33 @@ const ClientReservations: React.FC = () => {
           open={modalVisible}
           onCancel={() => setModalVisible(false)}
           width={900}
-          footer={[
-            <Button key="close" onClick={() => setModalVisible(false)}>
-              Cerrar
-            </Button>,
-          ]}
+          footer={
+            String(selectedReservation?.status).toUpperCase() === "CANCELADA" ||
+            String(selectedReservation?.status).toUpperCase() === "FINALIZADA"
+              ? [
+                  <Button key="close" onClick={() => setModalVisible(false)}>
+                    Cerrar
+                  </Button>,
+                ]
+              : [
+                  <Button
+                    key="cancel"
+                    danger
+                    icon={<CloseCircleOutlined />}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      console.log("🔴 Botón cancelar clickeado en Cliente");
+                      handleCancelReservation(selectedReservation!.id);
+                    }}
+                  >
+                    Cancelar Reservación
+                  </Button>,
+                  <Button key="close" onClick={() => setModalVisible(false)}>
+                    Cerrar
+                  </Button>,
+                ]
+          }
         >
           {selectedReservation && (
             <div className="space-y-6">
