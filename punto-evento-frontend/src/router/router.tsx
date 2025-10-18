@@ -14,7 +14,6 @@ import ClientRequests from "../pages/client/ClientRequests";
 import ClientQuotes from "../pages/client/ClientQuotes";
 import ClientDashboard from "../pages/client/ClientDashboard";
 import ClientReservations from "../pages/client/ClientReservations";
-import AdminQuotes from "../pages/admin/AdminQuotes";
 import AdminReservations from "../pages/admin/AdminReservations";
 import AdminRequests from "../pages/admin/AdminRequests";
 import AdminDashboard from "../pages/admin/AdminDashboard";
@@ -58,14 +57,6 @@ export const router = createBrowserRouter([
         element: (
           <RoleProtectedRoute allowedRoles={[UserType.ADMIN]}>
             <AdminDashboard />
-          </RoleProtectedRoute>
-        ),
-      },
-      {
-        path: "/admin/quotes",
-        element: (
-          <RoleProtectedRoute allowedRoles={[UserType.ADMIN]}>
-            <AdminQuotes />
           </RoleProtectedRoute>
         ),
       },

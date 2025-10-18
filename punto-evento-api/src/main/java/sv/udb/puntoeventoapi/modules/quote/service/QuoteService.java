@@ -105,7 +105,7 @@ public class QuoteService {
                 .startDate(dto.startDate() != null ? dto.startDate().atStartOfDay() : null)
                 .endDate(dto.endDate() != null ? dto.endDate().atStartOfDay() : null)
                 .additionalCosts(dto.additionalCosts() != null ? BigDecimal.valueOf(dto.additionalCosts()) : BigDecimal.ZERO)
-                .status(QuoteStatus.EnProceso)
+                .status(QuoteStatus.Pendiente) // Cambiado a Pendiente para que el cliente pueda aprobar/rechazar
                 .createdAt(LocalDateTime.now())
                 .items(new ArrayList<>())
                 .build();
@@ -267,9 +267,9 @@ public class QuoteService {
             String action = dto.getAction().toUpperCase();
             
             if ("APROBAR".equals(action)) {
-                // Verificar que la cotización esté en estado pendiente
-                if (quote.getStatus() != QuoteStatus.Pendiente) {
-                    return ApiResponse.error("Solo se pueden aprobar cotizaciones pendientes");
+                // Verificar que la cotización esté en estado pendiente o en proceso
+                if (quote.getStatus() != QuoteStatus.Pendiente && quote.getStatus() != QuoteStatus.EnProceso) {
+                    return ApiResponse.error("Solo se pueden aprobar cotizaciones pendientes o en proceso. Estado actual: " + quote.getStatus());
                 }
                 
                 // Cambiar estado a aprobada
@@ -304,6 +304,11 @@ public class QuoteService {
                 return ApiResponse.success(toResponse(approvedQuote), "Cotización aprobada y reservación creada exitosamente");
                 
             } else if ("RECHAZAR".equals(action)) {
+                // Verificar que la cotización esté en estado pendiente o en proceso
+                if (quote.getStatus() != QuoteStatus.Pendiente && quote.getStatus() != QuoteStatus.EnProceso) {
+                    return ApiResponse.error("Solo se pueden rechazar cotizaciones pendientes o en proceso. Estado actual: " + quote.getStatus());
+                }
+                
                 // Cambiar estado a rechazada
                 quote.setStatus(QuoteStatus.Rechazada);
                 quote.setUpdatedAt(LocalDateTime.now());

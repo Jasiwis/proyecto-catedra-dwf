@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   Card,
   Table,
@@ -21,8 +21,7 @@ import {
   SearchOutlined,
   ReloadOutlined,
 } from "@ant-design/icons";
-import { useAuth } from "../../hooks/use-auth";
-import dayjs from "dayjs";
+import dayjs, { Dayjs } from "dayjs";
 import { getMyQuotes, approveOrRejectQuote } from "../../api/quote";
 
 interface QuoteData {
@@ -31,7 +30,7 @@ interface QuoteData {
   eventName: string;
   eventDate: string;
   location: string;
-  status: "PENDIENTE" | "APROBADA" | "RECHAZADA";
+  status: "PENDIENTE" | "APROBADA" | "RECHAZADA" | "ENPROCESO" | "EN_PROCESO";
   subtotal: number;
   taxTotal: number;
   additionalCosts: number;
@@ -49,7 +48,6 @@ interface QuoteItem {
 }
 
 const ClientQuotes: React.FC = () => {
-  const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [quotes, setQuotes] = useState<QuoteData[]>([]);
   const [modalVisible, setModalVisible] = useState(false);
@@ -58,7 +56,9 @@ const ClientQuotes: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState<string | undefined>(
     undefined
   );
-  const [dateRange, setDateRange] = useState<any[]>([]);
+  const [dateRange, setDateRange] = useState<
+    [Dayjs | null, Dayjs | null] | null
+  >(null);
   const [savedScroll, setSavedScroll] = useState<number>(0);
   const [actionModalVisible, setActionModalVisible] = useState(false);
   const [actionType, setActionType] = useState<"APROBAR" | "RECHAZAR">(
@@ -66,55 +66,95 @@ const ClientQuotes: React.FC = () => {
   );
   const [form] = Form.useForm();
 
-  useEffect(() => {
-    fetchQuotes();
-  }, []);
-
-  const fetchQuotes = async () => {
+  const fetchQuotes = useCallback(async () => {
     try {
       setLoading(true);
       const response = await getMyQuotes({
         q: searchText || undefined,
         status: statusFilter,
-        dateFrom: dateRange?.[0]
-          ? dayjs(dateRange[0]).format("YYYY-MM-DD")
-          : undefined,
-        dateTo: dateRange?.[1]
-          ? dayjs(dateRange[1]).format("YYYY-MM-DD")
-          : undefined,
+        dateFrom:
+          dateRange?.[0] && dateRange[0]
+            ? dateRange[0].format("YYYY-MM-DD")
+            : undefined,
+        dateTo:
+          dateRange?.[1] && dateRange[1]
+            ? dateRange[1].format("YYYY-MM-DD")
+            : undefined,
       });
-      const data: QuoteData[] = (response?.data || []).map((q) => ({
-        id: q.id,
-        requestId: "",
-        eventName: q.eventName || "Sin nombre",
-        eventDate: q.startDate || q.createdAt,
-        location: "",
-        status: (q.status === undefined
-          ? "PENDIENTE"
-          : (q.status as unknown as string).toUpperCase()) as
-          | "PENDIENTE"
-          | "APROBADA"
-          | "RECHAZADA",
-        subtotal: Number(q.subtotal ?? 0),
-        taxTotal: Number(q.taxTotal ?? 0),
-        additionalCosts: Number(q.additionalCosts ?? 0),
-        total: Number(q.total ?? 0),
-        createdAt: q.createdAt,
-        items: (q.items || []).map((item: any) => ({
-          id: item.id,
-          description: item.description,
-          quantity: Number(item.quantity),
-          unitPrice: Number(item.unitPrice),
-          total: Number(item.total),
-        })),
-      }));
+      const data: QuoteData[] = (response?.data || []).map(
+        (q: {
+          id: string;
+          eventName?: string;
+          startDate?: string;
+          createdAt?: string;
+          status?: string;
+          subtotal?: number;
+          taxTotal?: number;
+          additionalCosts?: number;
+          total?: number;
+          items?: Array<{
+            id: string;
+            description: string;
+            quantity: number;
+            unitPrice: number;
+            total: number;
+          }>;
+        }) => {
+          const statusFromBackend = q.status;
+          const normalizedStatus = (
+            q.status === undefined
+              ? "PENDIENTE"
+              : (q.status as unknown as string).toUpperCase()
+          ) as
+            | "PENDIENTE"
+            | "APROBADA"
+            | "RECHAZADA"
+            | "ENPROCESO"
+            | "EN_PROCESO";
+
+          console.log("🔍 Cotización:", {
+            id: q.id,
+            eventName: q.eventName,
+            statusFromBackend,
+            normalizedStatus,
+          });
+
+          return {
+            id: q.id,
+            requestId: "",
+            eventName: q.eventName || "Sin nombre",
+            eventDate: q.startDate || q.createdAt || "",
+            location: "",
+            status: normalizedStatus,
+            subtotal: Number(q.subtotal ?? 0),
+            taxTotal: Number(q.taxTotal ?? 0),
+            additionalCosts: Number(q.additionalCosts ?? 0),
+            total: Number(q.total ?? 0),
+            createdAt: q.createdAt || "",
+            items: (q.items || []).map((item) => ({
+              id: item.id,
+              description: item.description,
+              quantity: Number(item.quantity),
+              unitPrice: Number(item.unitPrice),
+              total: Number(item.total),
+            })),
+          };
+        }
+      );
+
+      console.log("📊 Cotizaciones cargadas:", data);
       setQuotes(data);
-    } catch (error) {
+    } catch (error: unknown) {
+      console.error("Error al cargar cotizaciones:", error);
       message.error("Error al cargar las cotizaciones");
     } finally {
       setLoading(false);
     }
-  };
+  }, [searchText, statusFilter, dateRange]);
+
+  useEffect(() => {
+    fetchQuotes();
+  }, [fetchQuotes]);
 
   const showQuoteDetails = (quote: QuoteData) => {
     setSelectedQuote(quote);
@@ -138,52 +178,146 @@ const ClientQuotes: React.FC = () => {
       setSavedScroll(window.scrollY);
       setLoading(true);
 
+      console.log("📤 Procesando acción:", {
+        quoteId: selectedQuote.id,
+        action: actionType,
+        notes: values.notes,
+      });
+
       const response = await approveOrRejectQuote(
         selectedQuote.id,
         actionType,
         values.notes
       );
 
+      console.log("📥 Respuesta del servidor:", response);
+
       if (response.success) {
         if (actionType === "APROBAR") {
-          message.success(
-            "Cotización aprobada exitosamente. Se ha creado una reservación automáticamente."
-          );
+          message.success({
+            content:
+              "✅ ¡Cotización aprobada exitosamente! Se ha creado una reservación en estado 'En Planeación'. Puedes verla en la sección de Mis Reservaciones.",
+            duration: 6,
+          });
         } else {
-          message.success("Cotización rechazada");
+          message.success({
+            content: "✅ Cotización rechazada correctamente",
+            duration: 4,
+          });
         }
 
-        fetchQuotes();
+        // Refrescar la lista de cotizaciones
+        await fetchQuotes();
         setActionModalVisible(false);
         setModalVisible(false);
         form.resetFields();
-        setTimeout(() => window.scrollTo({ top: savedScroll }), 0);
+        setTimeout(() => window.scrollTo({ top: savedScroll }), 100);
       } else {
-        message.error(response.message || "Error al procesar la cotización");
+        // Mostrar errores de validación si existen
+        if (response.errors && response.errors.length > 0) {
+          response.errors.forEach((err, index) => {
+            setTimeout(() => {
+              message.error({
+                content: `❌ ${
+                  err.field !== "internal" ? `${err.field}: ` : ""
+                }${err.message}`,
+                duration: 8,
+              });
+            }, index * 400);
+          });
+        } else {
+          message.error({
+            content: `❌ ${
+              response.message || "Error al procesar la cotización"
+            }`,
+            duration: 5,
+          });
+        }
       }
-    } catch (error: any) {
-      if (error.errorFields) {
-        // Validation errors
+    } catch (error: unknown) {
+      console.error("❌ Error al procesar cotización:", error);
+
+      if ((error as { errorFields?: unknown })?.errorFields) {
+        // Validation errors from form
         return;
       }
-      message.error(
-        error?.response?.data?.message || "Error al procesar la cotización"
-      );
+
+      // Extraer mensaje de error detallado
+      const errorResponse = (
+        error as {
+          response?: {
+            data?: {
+              errors?: Array<{ field: string; message: string }>;
+              message?: string;
+            };
+          };
+        }
+      )?.response?.data;
+
+      if (errorResponse?.errors && errorResponse.errors.length > 0) {
+        // Mostrar cada error de validación
+        errorResponse.errors.forEach((err, index) => {
+          setTimeout(() => {
+            message.error({
+              content: `❌ ${err.field !== "internal" ? `${err.field}: ` : ""}${
+                err.message
+              }`,
+              duration: 10,
+            });
+          }, index * 400);
+        });
+      } else if (errorResponse?.message) {
+        message.error({
+          content: `❌ ${errorResponse.message}`,
+          duration: 6,
+        });
+      } else if ((error as Error)?.message) {
+        message.error({
+          content: `❌ Error: ${(error as Error).message}`,
+          duration: 5,
+        });
+      } else {
+        message.error({
+          content: "❌ Error desconocido al procesar la cotización",
+          duration: 5,
+        });
+      }
     } finally {
       setLoading(false);
     }
   };
 
   const getStatusColor = (status: string) => {
-    switch (status) {
+    const normalized = status.toUpperCase();
+    switch (normalized) {
       case "PENDIENTE":
         return "orange";
       case "APROBADA":
         return "green";
       case "RECHAZADA":
         return "red";
+      case "ENPROCESO":
+      case "EN_PROCESO":
+        return "blue";
       default:
         return "default";
+    }
+  };
+
+  const getStatusLabel = (status: string) => {
+    const normalized = status.toUpperCase();
+    switch (normalized) {
+      case "PENDIENTE":
+        return "Pendiente";
+      case "APROBADA":
+        return "Aprobada";
+      case "RECHAZADA":
+        return "Rechazada";
+      case "ENPROCESO":
+      case "EN_PROCESO":
+        return "En Proceso";
+      default:
+        return status;
     }
   };
 
@@ -212,10 +346,10 @@ const ClientQuotes: React.FC = () => {
         { text: "Rechazada", value: "RECHAZADA" },
       ],
       filteredValue: statusFilter ? [statusFilter] : null,
-      onFilter: (value: string, record: QuoteData) =>
+      onFilter: (value: boolean | React.Key, record: QuoteData) =>
         String(record.status).toUpperCase() === String(value).toUpperCase(),
       render: (status: string) => (
-        <Tag color={getStatusColor(status)}>{status}</Tag>
+        <Tag color={getStatusColor(status)}>{getStatusLabel(status)}</Tag>
       ),
     },
     {
@@ -248,12 +382,20 @@ const ClientQuotes: React.FC = () => {
           >
             Ver Detalles
           </Button>
-          {record.status === "PENDIENTE" && (
+          {(record.status === "PENDIENTE" ||
+            record.status === "ENPROCESO" ||
+            record.status === "EN_PROCESO" ||
+            record.status.toUpperCase() === "PENDIENTE" ||
+            record.status.toUpperCase() === "ENPROCESO" ||
+            record.status.toUpperCase() === "EN_PROCESO") && (
             <>
               <Button
                 type="link"
                 icon={<CheckOutlined />}
-                onClick={() => showActionModal(record, "APROBAR")}
+                onClick={() => {
+                  console.log("🟢 Click Aprobar - Cotización:", record);
+                  showActionModal(record, "APROBAR");
+                }}
                 className="text-green-600"
               >
                 Aprobar
@@ -261,7 +403,10 @@ const ClientQuotes: React.FC = () => {
               <Button
                 type="link"
                 icon={<CloseOutlined />}
-                onClick={() => showActionModal(record, "RECHAZAR")}
+                onClick={() => {
+                  console.log("🔴 Click Rechazar - Cotización:", record);
+                  showActionModal(record, "RECHAZAR");
+                }}
                 className="text-red-600"
               >
                 Rechazar
@@ -310,8 +455,8 @@ const ClientQuotes: React.FC = () => {
                 style={{ width: 160 }}
               />
               <DatePicker.RangePicker
-                value={dateRange as any}
-                onChange={(val) => setDateRange(val as any)}
+                value={dateRange}
+                onChange={(val) => setDateRange(val)}
               />
               <Button onClick={fetchQuotes} type="primary">
                 Buscar
@@ -321,7 +466,7 @@ const ClientQuotes: React.FC = () => {
                 onClick={() => {
                   setSearchText("");
                   setStatusFilter(undefined);
-                  setDateRange([]);
+                  setDateRange(null);
                   fetchQuotes();
                 }}
               />
@@ -340,7 +485,7 @@ const ClientQuotes: React.FC = () => {
                 showSizeChanger: true,
                 showQuickJumper: true,
               }}
-              onChange={(pagination, filters) => {
+              onChange={(_pagination, filters) => {
                 const status = filters.status?.[0] as string | undefined;
                 setStatusFilter(status);
               }}
@@ -355,7 +500,13 @@ const ClientQuotes: React.FC = () => {
           onCancel={() => setModalVisible(false)}
           width={800}
           footer={
-            selectedQuote?.status === "PENDIENTE"
+            selectedQuote &&
+            (selectedQuote.status === "PENDIENTE" ||
+              selectedQuote.status === "ENPROCESO" ||
+              selectedQuote.status === "EN_PROCESO" ||
+              selectedQuote.status.toUpperCase() === "PENDIENTE" ||
+              selectedQuote.status.toUpperCase() === "ENPROCESO" ||
+              selectedQuote.status.toUpperCase() === "EN_PROCESO")
               ? [
                   <Button key="close" onClick={() => setModalVisible(false)}>
                     Cerrar
@@ -483,7 +634,12 @@ const ClientQuotes: React.FC = () => {
                 </div>
               </div>
 
-              {selectedQuote.status === "PENDIENTE" && (
+              {(selectedQuote.status === "PENDIENTE" ||
+                selectedQuote.status === "ENPROCESO" ||
+                selectedQuote.status === "EN_PROCESO" ||
+                selectedQuote.status.toUpperCase() === "PENDIENTE" ||
+                selectedQuote.status.toUpperCase() === "ENPROCESO" ||
+                selectedQuote.status.toUpperCase() === "EN_PROCESO") && (
                 <div className="bg-blue-50 p-4 rounded-lg">
                   <p className="text-blue-800">
                     <strong>Nota:</strong> Por favor revisa cuidadosamente los
@@ -499,9 +655,19 @@ const ClientQuotes: React.FC = () => {
         {/* Modal de Confirmación para Aprobar/Rechazar */}
         <Modal
           title={
-            actionType === "APROBAR"
-              ? "Aprobar Cotización"
-              : "Rechazar Cotización"
+            <div className="flex items-center gap-2">
+              {actionType === "APROBAR" ? (
+                <>
+                  <CheckOutlined className="text-green-600" />
+                  <span>Aprobar Cotización</span>
+                </>
+              ) : (
+                <>
+                  <CloseOutlined className="text-red-600" />
+                  <span>Rechazar Cotización</span>
+                </>
+              )}
+            </div>
           }
           open={actionModalVisible}
           onCancel={() => {
@@ -509,32 +675,107 @@ const ClientQuotes: React.FC = () => {
             form.resetFields();
           }}
           onOk={handleActionQuote}
-          okText={actionType === "APROBAR" ? "Aprobar" : "Rechazar"}
+          okText={
+            actionType === "APROBAR" ? (
+              <span>
+                <CheckOutlined /> Confirmar Aprobación
+              </span>
+            ) : (
+              <span>
+                <CloseOutlined /> Confirmar Rechazo
+              </span>
+            )
+          }
           cancelText="Cancelar"
           confirmLoading={loading}
           okButtonProps={{
             danger: actionType === "RECHAZAR",
+            type: actionType === "APROBAR" ? "primary" : "default",
+            size: "large",
           }}
+          cancelButtonProps={{
+            size: "large",
+          }}
+          width={600}
         >
-          <div className="space-y-4">
+          <div className="space-y-4 py-2">
             {selectedQuote && (
-              <div>
-                <p>
-                  <strong>Evento:</strong> {selectedQuote.eventName}
-                </p>
-                <p>
-                  <strong>Total:</strong> ${selectedQuote.total.toFixed(2)}
-                </p>
+              <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                <h4 className="font-semibold text-gray-700 mb-3">
+                  Detalles de la Cotización
+                </h4>
+                <div className="space-y-2">
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-600">Evento:</span>
+                    <span className="font-medium">
+                      {selectedQuote.eventName}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-600">Fecha del Evento:</span>
+                    <span className="font-medium">
+                      {dayjs(selectedQuote.eventDate).format("DD/MM/YYYY")}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center border-t pt-2 mt-2">
+                    <span className="text-gray-600 font-semibold">
+                      Total a Pagar:
+                    </span>
+                    <span className="text-xl font-bold text-green-600">
+                      ${selectedQuote.total.toFixed(2)}
+                    </span>
+                  </div>
+                </div>
               </div>
             )}
 
             {actionType === "APROBAR" && (
-              <div className="bg-green-50 p-3 rounded border border-green-200">
-                <p className="text-green-800 text-sm">
-                  <strong>Importante:</strong> Al aprobar esta cotización, se
-                  creará automáticamente una reservación para tu evento en
-                  estado "EN PLANEACIÓN".
-                </p>
+              <div className="bg-green-50 p-4 rounded-lg border border-green-300">
+                <div className="flex gap-3">
+                  <div className="flex-shrink-0">
+                    <CheckOutlined className="text-green-600 text-xl" />
+                  </div>
+                  <div>
+                    <p className="text-green-900 font-semibold mb-1">
+                      ¿Qué sucederá al aprobar?
+                    </p>
+                    <ul className="text-green-800 text-sm space-y-1 list-disc list-inside">
+                      <li>
+                        Se creará automáticamente una{" "}
+                        <strong>reservación</strong> en estado "En Planeación"
+                      </li>
+                      <li>
+                        Podrás ver tu reservación en la sección{" "}
+                        <strong>"Mis Reservaciones"</strong>
+                      </li>
+                      <li>
+                        El equipo comenzará a planificar los detalles de tu
+                        evento
+                      </li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {actionType === "RECHAZAR" && (
+              <div className="bg-red-50 p-4 rounded-lg border border-red-300">
+                <div className="flex gap-3">
+                  <div className="flex-shrink-0">
+                    <CloseOutlined className="text-red-600 text-xl" />
+                  </div>
+                  <div>
+                    <p className="text-red-900 font-semibold mb-1">
+                      Importante
+                    </p>
+                    <p className="text-red-800 text-sm">
+                      Al rechazar esta cotización, podrás solicitar una nueva
+                      cotización ajustada a tus necesidades. Por favor, explica
+                      el motivo del rechazo para que podamos mejorar nuestra
+                      propuesta.
+                    </p>
+                  </div>
+                </div>
               </div>
             )}
 
@@ -542,9 +783,19 @@ const ClientQuotes: React.FC = () => {
               <Form.Item
                 name="notes"
                 label={
-                  actionType === "APROBAR"
-                    ? "Notas adicionales (opcional)"
-                    : "Motivo del rechazo"
+                  <span className="font-semibold">
+                    {actionType === "APROBAR"
+                      ? "Comentarios o instrucciones especiales"
+                      : "Motivo del rechazo"}
+                    {actionType === "APROBAR" && (
+                      <span className="text-gray-400 font-normal ml-2">
+                        (opcional)
+                      </span>
+                    )}
+                    {actionType === "RECHAZAR" && (
+                      <span className="text-red-500 ml-1">*</span>
+                    )}
+                  </span>
                 }
                 rules={
                   actionType === "RECHAZAR"
@@ -552,6 +803,11 @@ const ClientQuotes: React.FC = () => {
                         {
                           required: true,
                           message: "Por favor ingresa el motivo del rechazo",
+                        },
+                        {
+                          min: 10,
+                          message:
+                            "Por favor proporciona más detalles (mínimo 10 caracteres)",
                         },
                       ]
                     : []
@@ -561,9 +817,11 @@ const ClientQuotes: React.FC = () => {
                   rows={4}
                   placeholder={
                     actionType === "APROBAR"
-                      ? "Agrega comentarios o instrucciones especiales..."
-                      : "Explica brevemente por qué rechazas esta cotización..."
+                      ? "Ejemplo: Por favor considerar decoración adicional en tonos dorados..."
+                      : "Ejemplo: El precio excede mi presupuesto, necesito opciones más económicas..."
                   }
+                  showCount
+                  maxLength={500}
                 />
               </Form.Item>
             </Form>

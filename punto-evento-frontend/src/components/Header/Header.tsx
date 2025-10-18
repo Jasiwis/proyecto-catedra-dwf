@@ -77,12 +77,6 @@ const Header: React.FC<HeaderProps> = ({
           to: "/admin/requests",
         },
         {
-          key: "quotes",
-          icon: <FileTextOutlined />,
-          label: "Cotizaciones",
-          to: "/admin/quotes",
-        },
-        {
           key: "reservations",
           icon: <CalendarOutlined />,
           label: "Reservas",

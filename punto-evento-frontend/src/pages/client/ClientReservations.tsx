@@ -19,12 +19,14 @@ import { reservationsApi } from "../../api/reservations";
 
 interface ReservationData {
   id: string;
+  quoteId?: string;
   eventName: string;
   scheduledFor: string;
   location: string;
   status: string;
   progressPercentage: number;
   createdAt: string;
+  quoteTotal?: number;
 }
 
 const ClientReservations: React.FC = () => {
@@ -59,12 +61,14 @@ const ClientReservations: React.FC = () => {
       });
       const data = (response?.data || []).map((r: any) => ({
         id: r.id,
+        quoteId: r.quote?.id,
         eventName: r.eventName || "Sin nombre",
         scheduledFor: r.scheduledFor,
         location: r.location,
         status: String(r.status).toUpperCase(),
         progressPercentage: Number(r.progressPercentage || 0),
         createdAt: r.createdAt,
+        quoteTotal: r.quote?.total,
       }));
       setReservations(data);
     } catch (error) {
@@ -81,7 +85,46 @@ const ClientReservations: React.FC = () => {
 
   const getStatusColor = (status: string) => {
     const normalized = String(status).toUpperCase();
-    return normalized === "ACTIVO" ? "blue" : "default";
+    switch (normalized) {
+      case "EN_PLANEACION":
+      case "ENPLANEACION":
+        return "cyan";
+      case "PROGRAMADA":
+      case "ACTIVO":
+        return "blue";
+      case "EN_CURSO":
+      case "ENCURSO":
+        return "orange";
+      case "FINALIZADA":
+      case "INACTIVO":
+        return "green";
+      case "CANCELADA":
+        return "red";
+      default:
+        return "default";
+    }
+  };
+
+  const getStatusLabel = (status: string) => {
+    const normalized = String(status).toUpperCase();
+    switch (normalized) {
+      case "EN_PLANEACION":
+      case "ENPLANEACION":
+        return "En Planeación";
+      case "PROGRAMADA":
+      case "ACTIVO":
+        return "Programada";
+      case "EN_CURSO":
+      case "ENCURSO":
+        return "En Curso";
+      case "FINALIZADA":
+      case "INACTIVO":
+        return "Finalizada";
+      case "CANCELADA":
+        return "Cancelada";
+      default:
+        return status;
+    }
   };
 
   const columns = [
@@ -116,7 +159,7 @@ const ClientReservations: React.FC = () => {
       onFilter: (value: string, record: ReservationData) =>
         String(record.status).toUpperCase() === String(value).toUpperCase(),
       render: (status: string) => (
-        <Tag color={getStatusColor(status)}>{status}</Tag>
+        <Tag color={getStatusColor(status)}>{getStatusLabel(status)}</Tag>
       ),
     },
     {
@@ -260,7 +303,7 @@ const ClientReservations: React.FC = () => {
                 </Descriptions.Item>
                 <Descriptions.Item label="Estado">
                   <Tag color={getStatusColor(selectedReservation.status)}>
-                    {selectedReservation.status}
+                    {getStatusLabel(selectedReservation.status)}
                   </Tag>
                 </Descriptions.Item>
                 <Descriptions.Item label="Creada">
@@ -268,6 +311,13 @@ const ClientReservations: React.FC = () => {
                     "DD/MM/YYYY HH:mm"
                   )}
                 </Descriptions.Item>
+                {selectedReservation.quoteTotal && (
+                  <Descriptions.Item label="Total Cotizado">
+                    <span className="font-semibold text-green-600">
+                      ${Number(selectedReservation.quoteTotal).toFixed(2)}
+                    </span>
+                  </Descriptions.Item>
+                )}
                 <Descriptions.Item label="Progreso" span={2}>
                   <Progress
                     percent={selectedReservation.progressPercentage}

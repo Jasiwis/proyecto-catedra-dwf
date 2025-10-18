@@ -18,14 +18,21 @@ import { reservationsApi } from "../../api/reservations";
 interface ReservationData {
   id: string;
   quoteId: string;
+  requestId?: string;
   clientName: string;
   eventName: string;
   eventDate: string;
   location: string;
-  status: "PROGRAMADA" | "EN_CURSO" | "FINALIZADA" | "CANCELADA";
+  status:
+    | "PROGRAMADA"
+    | "EN_CURSO"
+    | "FINALIZADA"
+    | "CANCELADA"
+    | "EN_PLANEACION";
   progressPercentage: number;
   createdAt: string;
   scheduledFor: string;
+  quoteTotal?: number;
   tasks: TaskData[];
 }
 
@@ -62,8 +69,15 @@ const AdminReservations: React.FC = () => {
 
   const mapStatusToEnum = (
     status: string
-  ): "PROGRAMADA" | "EN_CURSO" | "FINALIZADA" | "CANCELADA" => {
+  ):
+    | "PROGRAMADA"
+    | "EN_CURSO"
+    | "FINALIZADA"
+    | "CANCELADA"
+    | "EN_PLANEACION" => {
     const normalized = String(status).toUpperCase();
+    if (normalized === "EN_PLANEACION" || normalized === "ENPLANEACION")
+      return "EN_PLANEACION";
     if (normalized === "ACTIVO" || normalized === "PROGRAMADA")
       return "PROGRAMADA";
     if (normalized === "EN_CURSO" || normalized === "ENCURSO")
@@ -71,7 +85,7 @@ const AdminReservations: React.FC = () => {
     if (normalized === "FINALIZADA" || normalized === "INACTIVO")
       return "FINALIZADA";
     if (normalized === "CANCELADA") return "CANCELADA";
-    return "PROGRAMADA"; // Default
+    return "EN_PLANEACION"; // Default
   };
 
   const fetchReservations = async () => {
@@ -83,6 +97,7 @@ const AdminReservations: React.FC = () => {
         (r: ReservationApiResponse): ReservationData => ({
           id: r.id,
           quoteId: r.quote?.id || "",
+          requestId: (r.quote as any)?.request?.id,
           clientName: r.client?.name || "Cliente no disponible",
           eventName: r.eventName || "Sin nombre",
           eventDate: r.scheduledFor || "",
@@ -91,6 +106,7 @@ const AdminReservations: React.FC = () => {
           progressPercentage: Number(r.progressPercentage || 0),
           createdAt: r.createdAt || new Date().toISOString(),
           scheduledFor: r.scheduledFor || "",
+          quoteTotal: (r.quote as any)?.total,
           tasks: [], // Las tareas se cargarán por separado si es necesario
         })
       );
@@ -126,6 +142,8 @@ const AdminReservations: React.FC = () => {
 
   const getStatusColor = (status: string) => {
     switch (status) {
+      case "EN_PLANEACION":
+        return "cyan";
       case "PROGRAMADA":
         return "blue";
       case "EN_CURSO":
@@ -136,6 +154,23 @@ const AdminReservations: React.FC = () => {
         return "red";
       default:
         return "default";
+    }
+  };
+
+  const getStatusLabel = (status: string) => {
+    switch (status) {
+      case "EN_PLANEACION":
+        return "En Planeación";
+      case "PROGRAMADA":
+        return "Programada";
+      case "EN_CURSO":
+        return "En Curso";
+      case "FINALIZADA":
+        return "Finalizada";
+      case "CANCELADA":
+        return "Cancelada";
+      default:
+        return status;
     }
   };
 
@@ -183,7 +218,7 @@ const AdminReservations: React.FC = () => {
       dataIndex: "status",
       key: "status",
       render: (status: string) => (
-        <Tag color={getStatusColor(status)}>{status}</Tag>
+        <Tag color={getStatusColor(status)}>{getStatusLabel(status)}</Tag>
       ),
     },
     {
@@ -260,6 +295,17 @@ const AdminReservations: React.FC = () => {
 
         {/* Resumen de Reservas */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+          <Card>
+            <div className="text-center">
+              <div className="text-2xl font-bold text-cyan-600">
+                {
+                  reservations.filter((r) => r.status === "EN_PLANEACION")
+                    .length
+                }
+              </div>
+              <div className="text-sm text-gray-600">En Planeación</div>
+            </div>
+          </Card>
           <Card>
             <div className="text-center">
               <div className="text-2xl font-bold text-blue-600">
@@ -357,9 +403,16 @@ const AdminReservations: React.FC = () => {
                 </Descriptions.Item>
                 <Descriptions.Item label="Estado">
                   <Tag color={getStatusColor(selectedReservation.status)}>
-                    {selectedReservation.status}
+                    {getStatusLabel(selectedReservation.status)}
                   </Tag>
                 </Descriptions.Item>
+                {selectedReservation.quoteTotal && (
+                  <Descriptions.Item label="Total Cotizado">
+                    <span className="font-semibold text-green-600">
+                      ${Number(selectedReservation.quoteTotal).toFixed(2)}
+                    </span>
+                  </Descriptions.Item>
+                )}
                 <Descriptions.Item label="Progreso General">
                   <Progress
                     percent={selectedReservation.progressPercentage}
