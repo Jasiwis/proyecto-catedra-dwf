@@ -15,7 +15,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
         userName={user?.name}
         onLogout={logout}
       />
-      <main className="pt-16">{children}</main>
+      <main className="">{children}</main>
     </div>
   );
 };

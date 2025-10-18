@@ -3,7 +3,6 @@ import { Avatar, Dropdown } from "antd";
 import {
   UserOutlined,
   LogoutOutlined,
-  HomeOutlined,
   DashboardOutlined,
   FileTextOutlined,
   TeamOutlined,
@@ -36,11 +35,6 @@ const Header: React.FC<HeaderProps> = ({
   };
 
   const items: MenuProps["items"] = [
-    {
-      key: "home",
-      icon: <HomeOutlined />,
-      label: <Link to="/">Home</Link>,
-    },
     {
       key: "logout",
       icon: <LogoutOutlined />,

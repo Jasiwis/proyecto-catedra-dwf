@@ -1,20 +1,11 @@
 import React from "react";
 
 import { Link } from "react-router-dom";
-import Header from "../../components/Header/Header";
-import { useAuth } from "../../hooks/use-auth";
 import { Button } from "../../components/Buttons/Button";
 
 const Home: React.FC = () => {
-  const { user, isAuthenticated, logout } = useAuth();
   return (
     <div className="min-h-screen flex flex-col bg-[#eaf1fb]">
-      <Header
-        isAuthenticated={isAuthenticated}
-        userName={isAuthenticated ? user?.name ?? "" : ""}
-        onLogout={logout}
-      />
-
       {/* Hero Section */}
       <section
         className="relative flex flex-col items-center justify-center text-center py-20 bg-gradient-to-b from-[#7da2c1] to-[#eaf1fb]"
