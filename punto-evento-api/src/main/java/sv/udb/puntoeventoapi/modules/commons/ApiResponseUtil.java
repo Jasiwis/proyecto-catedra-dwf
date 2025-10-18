@@ -37,4 +37,12 @@ public class ApiResponseUtil {
                 .message(errorMessage)
                 .build()));
     }
+
+    // Para error simple con solo mensaje
+    public static <T> ApiResponse<T> error(String message) {
+        return ApiResponse.<T>builder()
+                .success(false)
+                .message(message)
+                .build();
+    }
 }
