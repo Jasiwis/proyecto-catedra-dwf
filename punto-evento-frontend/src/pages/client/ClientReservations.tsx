@@ -23,6 +23,7 @@ import {
 import dayjs from "dayjs";
 import { reservationsApi } from "../../api/reservations";
 import type { ReservationDetail } from "../../api/reservations";
+import { formatDateTimeToSpanish } from "../../utils/date-formatter.util";
 
 const ClientReservations: React.FC = () => {
   const [loading, setLoading] = useState(false);
@@ -191,7 +192,7 @@ const ClientReservations: React.FC = () => {
       title: "Fecha Programada",
       dataIndex: "scheduledFor",
       key: "scheduledFor",
-      render: (date: string) => dayjs(date).format("DD/MM/YYYY HH:mm"),
+      render: (date: string) => formatDateTimeToSpanish(date),
       sorter: (a: ReservationDetail, b: ReservationDetail) =>
         dayjs(a.scheduledFor).unix() - dayjs(b.scheduledFor).unix(),
     },
@@ -243,7 +244,7 @@ const ClientReservations: React.FC = () => {
       title: "Creada",
       dataIndex: "createdAt",
       key: "createdAt",
-      render: (date: string) => dayjs(date).format("DD/MM/YYYY HH:mm"),
+      render: (date: string) => formatDateTimeToSpanish(date),
       sorter: (a: ReservationDetail, b: ReservationDetail) =>
         dayjs(a.createdAt).unix() - dayjs(b.createdAt).unix(),
     },
@@ -380,9 +381,7 @@ const ClientReservations: React.FC = () => {
                   {selectedReservation.eventName}
                 </Descriptions.Item>
                 <Descriptions.Item label="Fecha Programada">
-                  {dayjs(selectedReservation.scheduledFor).format(
-                    "DD/MM/YYYY HH:mm"
-                  )}
+                  {formatDateTimeToSpanish(selectedReservation.scheduledFor)}
                 </Descriptions.Item>
                 <Descriptions.Item label="Ubicación">
                   {selectedReservation.location}
@@ -393,9 +392,7 @@ const ClientReservations: React.FC = () => {
                   </Tag>
                 </Descriptions.Item>
                 <Descriptions.Item label="Creada">
-                  {dayjs(selectedReservation.createdAt).format(
-                    "DD/MM/YYYY HH:mm"
-                  )}
+                  {formatDateTimeToSpanish(selectedReservation.createdAt)}
                 </Descriptions.Item>
                 {selectedReservation.notes && (
                   <Descriptions.Item label="Notas" span={2}>
@@ -563,14 +560,14 @@ const ClientReservations: React.FC = () => {
                           dataIndex: "startDatetime",
                           key: "startDatetime",
                           render: (date: string) =>
-                            date ? dayjs(date).format("DD/MM/YYYY HH:mm") : "-",
+                            date ? formatDateTimeToSpanish(date) : "-",
                         },
                         {
                           title: "Fecha Fin",
                           dataIndex: "endDatetime",
                           key: "endDatetime",
                           render: (date: string) =>
-                            date ? dayjs(date).format("DD/MM/YYYY HH:mm") : "-",
+                            date ? formatDateTimeToSpanish(date) : "-",
                         },
                       ]}
                     />

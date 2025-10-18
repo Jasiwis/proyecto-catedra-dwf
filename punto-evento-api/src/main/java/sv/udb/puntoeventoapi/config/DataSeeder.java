@@ -179,7 +179,7 @@ public class DataSeeder implements CommandLineRunner {
         Request req1 = createRequest(
             client, admin,
             "Boda de Aniversario",
-            now.plusDays(60).format(formatter.ofPattern("yyyy-MM-dd")),
+            now.plusDays(15).format(formatter.ofPattern("yyyy-MM-dd")),
             "Hotel Sheraton Presidente, San Salvador",
             "Decoración floral, Música en vivo, Catering gourmet, Fotografía profesional",
             "Celebración de 25 años de matrimonio, ambiente elegante",
@@ -192,7 +192,7 @@ public class DataSeeder implements CommandLineRunner {
         
         Reservation reservation1 = createReservation(
             quote1, req1, admin, 
-            now.plusDays(60).format(formatter),
+            now.plusDays(15).format(formatter),
             ReservationStatus.FINALIZADA,
             now.minusDays(42)
         );
@@ -201,27 +201,27 @@ public class DataSeeder implements CommandLineRunner {
         createCompletedTask(reservation1, employee, admin, 
             "Montaje de decoración floral",
             "Instalación de arreglos florales en mesas y salón principal",
-            now.plusDays(59).withHour(8).withMinute(0),
-            now.plusDays(59).withHour(12).withMinute(0));
+            now.plusDays(14).withHour(8).withMinute(0),
+            now.plusDays(14).withHour(12).withMinute(0));
         
         createCompletedTask(reservation1, employee, admin,
             "Configuración de equipo de sonido",
             "Instalación y prueba de sistema de audio para música en vivo",
-            now.plusDays(59).withHour(14).withMinute(0),
-            now.plusDays(59).withHour(17).withMinute(0));
+            now.plusDays(14).withHour(14).withMinute(0),
+            now.plusDays(14).withHour(17).withMinute(0));
         
         createCompletedTask(reservation1, employee, admin,
             "Supervisión de catering",
             "Coordinación con equipo de catering y presentación de platillos",
-            now.plusDays(60).withHour(18).withMinute(0),
-            now.plusDays(60).withHour(22).withMinute(0));
+            now.plusDays(15).withHour(18).withMinute(0),
+            now.plusDays(15).withHour(22).withMinute(0));
         
         // ================== ESCENARIO 2: EVENTO EN CURSO ==================
         log.info("📋 Escenario 2: Evento en curso");
         Request req2 = createRequest(
             client, admin,
             "Conferencia Empresarial 2024",
-            now.plusDays(3).format(formatter.ofPattern("yyyy-MM-dd")),
+            now.plusDays(15).format(formatter.ofPattern("yyyy-MM-dd")),
             "Centro de Convenciones CIFCO",
             "Proyector y pantalla, Sistema de audio, Coffee break, Decoración corporativa",
             "Conferencia anual de negocios con 200 asistentes",
@@ -234,7 +234,7 @@ public class DataSeeder implements CommandLineRunner {
         
         Reservation reservation2 = createReservation(
             quote2, req2, admin,
-            now.plusDays(3).format(formatter),
+            now.plusDays(15).format(formatter),
             ReservationStatus.ENCURSO,
             now.minusDays(27)
         );
@@ -243,24 +243,24 @@ public class DataSeeder implements CommandLineRunner {
         Task task2_1 = createTask(reservation2, employee, admin,
             "Instalación de equipos audiovisuales",
             "Montar proyectores, pantallas y sistema de audio",
-            now.plusDays(2).withHour(7).withMinute(0),
-            now.plusDays(2).withHour(10).withMinute(0),
+            now.plusDays(14).withHour(7).withMinute(0),
+            now.plusDays(14).withHour(10).withMinute(0),
             TaskStatus.COMPLETADA,
             now.minusDays(27));
         
         Task task2_2 = createTask(reservation2, employee, admin,
             "Supervisión de coffee break",
             "Coordinar servicio de café y refrigerios",
-            now.plusDays(3).withHour(8).withMinute(0),
-            now.plusDays(3).withHour(12).withMinute(0),
+            now.plusDays(15).withHour(8).withMinute(0),
+            now.plusDays(15).withHour(12).withMinute(0),
             TaskStatus.EN_PROCESO,
             now.minusDays(27));
         
         Task task2_3 = createTask(reservation2, employee, admin,
             "Desmontaje de equipos",
             "Retirar equipos audiovisuales y decoración",
-            now.plusDays(3).withHour(17).withMinute(0),
-            now.plusDays(3).withHour(20).withMinute(0),
+            now.plusDays(15).withHour(17).withMinute(0),
+            now.plusDays(15).withHour(20).withMinute(0),
             TaskStatus.PENDIENTE,
             now.minusDays(27));
         
@@ -317,7 +317,7 @@ public class DataSeeder implements CommandLineRunner {
         Request req4 = createRequest(
             client, admin,
             "Cumpleaños Infantil Temático",
-            now.plusDays(30).format(formatter.ofPattern("yyyy-MM-dd")),
+            now.plusDays(15).format(formatter.ofPattern("yyyy-MM-dd")),
             "Casa de Eventos Happy Kids",
             "Animación infantil, Decoración de superhéroes, Inflables, Pastel personalizado",
             "Cumpleaños número 7, temática de superhéroes, 50 niños",
@@ -330,7 +330,7 @@ public class DataSeeder implements CommandLineRunner {
         
         Reservation reservation4 = createReservation(
             quote4, req4, admin,
-            now.plusDays(30).format(formatter),
+            now.plusDays(15).format(formatter),
             ReservationStatus.EN_PLANEACION,
             now.minusDays(7)
         );
@@ -339,16 +339,16 @@ public class DataSeeder implements CommandLineRunner {
         createTask(reservation4, employee, admin,
             "Instalación de inflables",
             "Montaje de castillos inflables y juegos",
-            now.plusDays(30).withHour(8).withMinute(0),
-            now.plusDays(30).withHour(11).withMinute(0),
+            now.plusDays(15).withHour(8).withMinute(0),
+            now.plusDays(15).withHour(11).withMinute(0),
             TaskStatus.PENDIENTE,
             now.minusDays(7));
         
         createTask(reservation4, employee, admin,
             "Decoración temática de superhéroes",
             "Ambientación completa del salón con temática",
-            now.plusDays(30).withHour(9).withMinute(0),
-            now.plusDays(30).withHour(12).withMinute(0),
+            now.plusDays(15).withHour(9).withMinute(0),
+            now.plusDays(15).withHour(12).withMinute(0),
             TaskStatus.PENDIENTE,
             now.minusDays(7));
         
@@ -357,7 +357,7 @@ public class DataSeeder implements CommandLineRunner {
         Request req5 = createRequest(
             client, admin,
             "Cena Romántica Privada",
-            now.plusDays(20).format(formatter.ofPattern("yyyy-MM-dd")),
+            now.plusDays(15).format(formatter.ofPattern("yyyy-MM-dd")),
             "Restaurante Vista Hermosa",
             "Música instrumental, Decoración floral, Menú gourmet",
             "Cena romántica de aniversario para 2 personas",
@@ -373,7 +373,7 @@ public class DataSeeder implements CommandLineRunner {
         Request req6 = createRequest(
             client, admin,
             "Reunión Familiar Navideña",
-            now.plusDays(90).format(formatter.ofPattern("yyyy-MM-dd")),
+            now.plusDays(15).format(formatter.ofPattern("yyyy-MM-dd")),
             "Rancho Los Pinos",
             "Música navideña, Catering tradicional, Decoración navideña, Árbol de Navidad",
             "Reunión familiar de fin de año, aproximadamente 80 personas",
@@ -389,7 +389,7 @@ public class DataSeeder implements CommandLineRunner {
         createRequest(
             client, admin,
             "Evento Corporativo Networking",
-            now.plusDays(45).format(formatter.ofPattern("yyyy-MM-dd")),
+            now.plusDays(15).format(formatter.ofPattern("yyyy-MM-dd")),
             "Hotel Crowne Plaza",
             "Coffee break, Sistema de audio, Decoración moderna",
             "Evento de networking empresarial para 100 personas",
@@ -401,7 +401,7 @@ public class DataSeeder implements CommandLineRunner {
         Request req8 = createRequest(
             client, admin,
             "Concierto Privado",
-            now.plusDays(50).format(formatter.ofPattern("yyyy-MM-dd")),
+            now.plusDays(15).format(formatter.ofPattern("yyyy-MM-dd")),
             "Teatro Nacional",
             "Sistema de sonido profesional, Iluminación escénica, Backstage",
             "Concierto privado cancelado por motivos personales",
@@ -414,7 +414,7 @@ public class DataSeeder implements CommandLineRunner {
         
         createReservation(
             quote8, req8, admin,
-            now.plusDays(50).format(formatter),
+            now.plusDays(15).format(formatter),
             ReservationStatus.CANCELADA,
             now.minusDays(32)
         );

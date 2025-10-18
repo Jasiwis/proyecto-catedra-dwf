@@ -28,6 +28,7 @@ import { tasksApi } from "../../api/task";
 import { getAllEmployees } from "../../api/employee";
 import type { ReservationDetail } from "../../api/reservations";
 import type { EmployeeResponse } from "../../interfaces/employee.interface";
+import { formatDateTimeToSpanish } from "../../utils/date-formatter.util";
 
 const AdminReservations: React.FC = () => {
   const [loading, setLoading] = useState(false);
@@ -262,7 +263,7 @@ const AdminReservations: React.FC = () => {
       title: "Fecha del Evento",
       dataIndex: "scheduledFor",
       key: "scheduledFor",
-      render: (date: string) => dayjs(date).format("DD/MM/YYYY HH:mm"),
+      render: (date: string) => formatDateTimeToSpanish(date),
     },
     {
       title: "Ubicación",
@@ -310,7 +311,7 @@ const AdminReservations: React.FC = () => {
       title: "Fecha de Reserva",
       dataIndex: "createdAt",
       key: "createdAt",
-      render: (date: string) => dayjs(date).format("DD/MM/YYYY HH:mm"),
+      render: (date: string) => formatDateTimeToSpanish(date),
     },
     {
       title: "Acciones",
@@ -522,9 +523,7 @@ const AdminReservations: React.FC = () => {
                   {selectedReservation.eventName}
                 </Descriptions.Item>
                 <Descriptions.Item label="Fecha Programada">
-                  {dayjs(selectedReservation.scheduledFor).format(
-                    "DD/MM/YYYY HH:mm"
-                  )}
+                  {formatDateTimeToSpanish(selectedReservation.scheduledFor)}
                 </Descriptions.Item>
                 <Descriptions.Item label="Ubicación">
                   {selectedReservation.location}
@@ -535,9 +534,7 @@ const AdminReservations: React.FC = () => {
                   </Tag>
                 </Descriptions.Item>
                 <Descriptions.Item label="Creada">
-                  {dayjs(selectedReservation.createdAt).format(
-                    "DD/MM/YYYY HH:mm"
-                  )}
+                  {formatDateTimeToSpanish(selectedReservation.createdAt)}
                 </Descriptions.Item>
                 {selectedReservation.notes && (
                   <Descriptions.Item label="Notas" span={2}>
@@ -707,14 +704,14 @@ const AdminReservations: React.FC = () => {
                         dataIndex: "startDatetime",
                         key: "startDatetime",
                         render: (date: string) =>
-                          date ? dayjs(date).format("DD/MM/YYYY HH:mm") : "-",
+                          date ? formatDateTimeToSpanish(date) : "-",
                       },
                       {
                         title: "Fecha Fin",
                         dataIndex: "endDatetime",
                         key: "endDatetime",
                         render: (date: string) =>
-                          date ? dayjs(date).format("DD/MM/YYYY HH:mm") : "-",
+                          date ? formatDateTimeToSpanish(date) : "-",
                       },
                     ]}
                   />
@@ -739,8 +736,8 @@ const AdminReservations: React.FC = () => {
                         <div>
                           <div className="font-semibold">Reserva Creada</div>
                           <div className="text-sm text-gray-500">
-                            {dayjs(selectedReservation.createdAt).format(
-                              "DD/MM/YYYY HH:mm"
+                            {formatDateTimeToSpanish(
+                              selectedReservation.createdAt
                             )}
                           </div>
                         </div>
@@ -775,9 +772,9 @@ const AdminReservations: React.FC = () => {
                                   Evento Iniciado
                                 </div>
                                 <div className="text-sm text-gray-500">
-                                  {dayjs(
+                                  {formatDateTimeToSpanish(
                                     selectedReservation.scheduledFor
-                                  ).format("DD/MM/YYYY HH:mm")}
+                                  )}
                                 </div>
                               </div>
                             ),
