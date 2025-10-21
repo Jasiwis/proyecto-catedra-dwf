@@ -100,43 +100,31 @@ const AdminDashboard: React.FC = () => {
       </Row>
 
       <Row gutter={[16, 16]}>
-        <Col xs={24} md={8}>
-          <Card title="Gestión de Cotizaciones" className="h-full">
-            <p className="text-gray-600 mb-4">
-              Revisa y gestiona todas las cotizaciones del sistema.
-            </p>
-            <Link to="/admin/quotes">
-              <Button type="primary" block>
-                Ir a Cotizaciones
-              </Button>
-            </Link>
-          </Card>
-        </Col>
-        <Col xs={24} md={8}>
-          <Card title="Gestión de Reservas" className="h-full">
-            <p className="text-gray-600 mb-4">
-              Administra las reservas y eventos confirmados.
-            </p>
-            <Link to="/admin/reservations">
-              <Button type="primary" block>
-                Ir a Reservas
-              </Button>
-            </Link>
-          </Card>
-        </Col>
-        <Col xs={24} md={8}>
-          <Card title="Gestión de Usuarios" className="h-full">
-            <p className="text-gray-600 mb-4">
-              Administra usuarios del sistema (admin y empleados).
-            </p>
-            <Link to="/admin/users">
-              <Button type="primary" block>
-                Ir a Usuarios
-              </Button>
-            </Link>
-          </Card>
-        </Col>
-      </Row>
+      <Col xs={24} md={12}>
+        <Card title="Gestión de Reservas" className="h-full">
+          <p className="text-gray-600 mb-4">
+            Administra las reservas y eventos confirmados.
+          </p>
+          <Link to="/admin/reservations">
+            <Button type="primary" block>
+              Ir a Reservas
+            </Button>
+          </Link>
+        </Card>
+      </Col>
+      <Col xs={24} md={12}>
+        <Card title="Gestión de Usuarios" className="h-full">
+          <p className="text-gray-600 mb-4">
+            Administra usuarios del sistema (admin y empleados).
+          </p>
+          <Link to="/admin/users">
+            <Button type="primary" block>
+              Ir a Usuarios
+            </Button>
+          </Link>
+        </Card>
+      </Col>
+    </Row>
     </div>
   );
 };
